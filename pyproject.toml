@@ -1,0 +1,16 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+
+[tool.ruff.lint]
+# 3. Rules to Enforce
+# E: pycodestyle (standard errors)
+# F: Pyflakes (logical errors like unused variables)
+# I: isort (sorts imports alphabetically automatically)
+# W: Warnings
+select = ["E", "F", "I", "W"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
