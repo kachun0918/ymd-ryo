@@ -1,0 +1,10 @@
+services:
+  yamada-bot:
+    build: .
+    container_name: yamada_ryo_bot
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./db:/app/db
+      - ./logs:/app/logs
