@@ -23,7 +23,7 @@ def setup_logging():
     # Time | Level | Logger Name | File:Line | Message
     dt_fmt = '%Y-%m-%d %H:%M:%S'
     formatter = logging.Formatter(
-        '[{asctime}] [{levelname:<8}] [{name:<20}] {filename:<20}:{lineno:<4} | {message}',
+        '[{asctime}] [{levelname:<8}] [{name:<32}] {filename:<25}:{lineno:<4} | {message}',
         dt_fmt, 
         style='{'
     )
