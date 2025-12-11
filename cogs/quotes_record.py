@@ -5,12 +5,12 @@ import random
 import os
 import logging
 
-logger = logging.getLogger('discord')
+logger = logging.getLogger('discord.recorder')
 
 class Recorder(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.db_name = "db/quotes.db" 
+        self.db_path = "db/quotes.db" 
 
     async def cog_load(self):
         if not os.path.exists('db'):
@@ -26,7 +26,7 @@ class Recorder(commands.Cog):
                 )
             """)
             await db.commit()
-        logger.info("   └── [Recorder] Database connection established")
+        logger.info("Database connection established")
 
     # !save 
     @commands.command(name="save")

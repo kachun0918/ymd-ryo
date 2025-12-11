@@ -1,9 +1,9 @@
 """
 logging configuration
 """
-
 import logging
 import os
+import sys
 from logging.handlers import RotatingFileHandler
 
 def setup_logging():
@@ -13,21 +13,32 @@ def setup_logging():
     logger = logging.getLogger('discord')
     logger.setLevel(logging.INFO)
 
-    # Prevent adding multiple handlers if function is called twice
-    if logger.handlers:
-        return
+    logging.getLogger('discord.http').setLevel(logging.WARNING)
+    logging.getLogger('discord.gateway').setLevel(logging.WARNING)
+    logging.getLogger('discord.client').setLevel(logging.WARNING)
 
-    handler = RotatingFileHandler(
-        filename='logs/discord.log',
-        encoding='utf-8',
-        maxBytes=32 * 1024 * 1024,  
-        backupCount=5
+    if logger.hasHandlers():
+        logger.handlers.clear()
+
+    # Time | Level | Logger Name | File:Line | Message
+    dt_fmt = '%Y-%m-%d %H:%M:%S'
+    formatter = logging.Formatter(
+        '[{asctime}] [{levelname:<8}] [{name:<20}] {filename:<20}:{lineno:<4} | {message}',
+        dt_fmt, 
+        style='{'
     )
 
-    # Format
-    dt_fmt = '%Y-%m-%d %H:%M:%S'
-    formatter = logging.Formatter('[{asctime}] [{levelname:<8}] {name}: {message}', dt_fmt, style='{')
-    handler.setFormatter(formatter)
+    # File Handler
+    file_handler = RotatingFileHandler(
+        filename='logs/discord.log',
+        encoding='utf-8',
+        maxBytes=32 * 1024 * 1024, 
+        backupCount=5
+    )
+    file_handler.setFormatter(formatter)
+    logger.addHandler(file_handler)
 
-    # Attach
-    logger.addHandler(handler)
+    # Console Handler 
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
