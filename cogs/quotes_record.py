@@ -4,7 +4,9 @@ import random
 
 import aiosqlite
 import discord
+from core.iam import not_blacklisted
 from discord.ext import commands
+
 
 logger = logging.getLogger("discord.recorder")
 
@@ -40,6 +42,7 @@ class Recorder(commands.Cog):
 
     # --- COMMAND: !save ---
     @commands.command(name="save")
+    @not_blacklisted()
     async def save_quote(self, ctx):
         if not ctx.guild:
             return
@@ -106,6 +109,7 @@ class Recorder(commands.Cog):
 
     # --- COMMAND: !9up @user ---
     @commands.command(name="9up")
+    @not_blacklisted()
     async def get_quote(self, ctx, member: discord.Member):
         if not ctx.guild:
             return
@@ -115,7 +119,7 @@ class Recorder(commands.Cog):
                 query = """
                     SELECT content, timestamp, channel_id
                     FROM quotes
-                    WHERE guild_id = ? AND user_id = ?"
+                    WHERE guild_id = ? AND user_id = ?
                 """
                 async with db.execute(query, (ctx.guild.id, member.id)) as cursor:
                     rows = await cursor.fetchall()
