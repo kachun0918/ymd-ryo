@@ -1,7 +1,6 @@
 import json
 import os
 
-
 DATA_DIR = "data"
 BLACKLIST_FILE = os.path.join(DATA_DIR, "blacklist.json")
 

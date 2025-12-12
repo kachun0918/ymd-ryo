@@ -220,8 +220,7 @@ class Recorder(commands.Cog):
 
             mimic_name = f"🗣️ {member.display_name}"
 
-            # --- PREPARE FOOTER EMBED ---
-            # We create a standalone embed for the footer metadata
+            # --- FOOTER EMBED ---
             footer_embed = None
 
             if show_footer:

@@ -21,13 +21,12 @@ class ErrorHandler(commands.Cog):
         if isinstance(error, commands.CommandNotFound):
             return
 
-        # SILENCE STEALTH CHECK (Integrates with Management)
+        # SILENCE STEALTH CHECK
         # If a user is not owner, or is blacklisted, we do NOTHING.
         if isinstance(error, (commands.CheckFailure, commands.NotOwner, commands.MissingRole)):
             return
 
-        # MISSING ARGUMENTS (Integrates with Management)
-        # Handles the case where you forget to type the extension name
+        # MISSING ARGUMENTS
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(
                 f"⚠️ **Missing Parameter**: `{error.param.name}`\n"

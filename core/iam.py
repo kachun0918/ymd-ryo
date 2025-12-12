@@ -30,11 +30,10 @@ def is_admin():
 
 def not_blacklisted():
     async def predicate(ctx):
-        if ctx.guild is None:  # Allow DMs (optional)
+        if ctx.guild is None:
             return True
 
         cmd_name = ctx.command.name
-        # 👇 UPDATE THIS LINE to pass ctx.guild.id
         if blacklist_store.is_blocked(ctx.guild.id, ctx.author.id, cmd_name):
             raise commands.CheckFailure(f"User is blacklisted from {cmd_name}")
         return True
