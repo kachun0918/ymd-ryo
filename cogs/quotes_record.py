@@ -121,10 +121,22 @@ class Recorder(commands.Cog):
             )
             await db.commit()
 
-        logger.info(f"💾 Saved quote in Guild {ctx.guild.id} from User {ref_msg.author.id}")
+        log_guildname = ctx.guild.name.replace("\n", " ")
+        if len(log_guildname) > 15:
+            log_guildname = log_guildname[:12] + "..."
+
+        log_content = ref_msg.content.replace("\n", " ")
+        if len(log_content) > 30:
+            log_content = log_content[:27] + "..."
+
+        logger.info(
+            f"💾 Saved quote in '{log_guildname}', "
+            f"Author: {ref_msg.author.display_name}, "
+            f"Saved By: {ctx.author.display_name}, "
+            f'Content: "{log_content}"'
+        )
         await ctx.send(f'✅ Recorded: "{ref_msg.content}"')
 
-    # --- COMMAND: 9up @user ---
     # --- COMMAND: 9up @user ---
     @commands.command(name="9up")
     @not_blacklisted()

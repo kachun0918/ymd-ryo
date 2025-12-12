@@ -1,7 +1,3 @@
-"""
-logging configuration
-"""
-
 import logging
 import os
 import sys
