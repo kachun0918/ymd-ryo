@@ -1,5 +1,6 @@
-import discord
 import logging
+
+import discord
 from discord.ext import commands
 
 logger = logging.getLogger("bot.errorhandler")
@@ -11,25 +12,21 @@ class ErrorHandler(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
-        # 1. IGNORE LOCAL HANDLERS
+        # IGNORE LOCAL HANDLERS
         if hasattr(ctx.command, "on_error"):
             return
-
         error = getattr(error, "original", error)
 
-        # 2. IGNORE "COMMAND NOT FOUND"
+        # IGNORE "COMMAND NOT FOUND"
         if isinstance(error, commands.CommandNotFound):
             return
 
-        # 3. SILENCE STEALTH CHECK (Integrates with Management)
+        # SILENCE STEALTH CHECK (Integrates with Management)
         # If a user is not owner, or is blacklisted, we do NOTHING.
-        # This keeps the bot silent/invisible to them.
-        if isinstance(
-            error, (commands.CheckFailure, commands.NotOwner, commands.MissingRole)
-        ):
+        if isinstance(error, (commands.CheckFailure, commands.NotOwner, commands.MissingRole)):
             return
 
-        # 4. MISSING ARGUMENTS (Integrates with Management)
+        # MISSING ARGUMENTS (Integrates with Management)
         # Handles the case where you forget to type the extension name
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(
@@ -38,7 +35,7 @@ class ErrorHandler(commands.Cog):
             )
             return
 
-        # 5. REAL ERRORS
+        # REAL ERRORS
         logger.error(f"Ignoring exception in command {ctx.command}:", exc_info=error)
 
         embed = discord.Embed(

@@ -1,12 +1,13 @@
 import logging
 import os
-import random
+from typing import Optional
 
 import aiosqlite
 import discord
-from core.iam import not_blacklisted
 from discord.ext import commands
 
+from core.iam import not_blacklisted
+from core.views import PaginationView
 
 logger = logging.getLogger("discord.recorder")
 
@@ -30,13 +31,17 @@ class Recorder(commands.Cog):
                     user_id INTEGER,
                     content TEXT,
                     timestamp TEXT,
-                    channel_id INTEGER
+                    channel_id INTEGER,
+                    adder_user_id INTEGER,
+                    added_timestamp INTEGER,
+                    uses INTEGER DEFAULT 0
                 )
             """
             )
             await db.execute(
                 "CREATE INDEX IF NOT EXISTS idx_guild_user ON quotes(guild_id, user_id)"
             )
+            await db.execute("CREATE INDEX IF NOT EXISTS idx_uses ON quotes(uses DESC)")
             await db.commit()
         logger.info("Database connection established")
 
@@ -49,9 +54,7 @@ class Recorder(commands.Cog):
 
         # Check if it is a Reply
         if not ctx.message.reference:
-            await ctx.send(
-                f"❌ Please reply to a message with `{ctx.prefix}save` to record it."
-            )
+            await ctx.send(f"❌ Please reply to a message with `{ctx.prefix}save` to record it.")
             return
 
         # Fetch the message
@@ -61,7 +64,19 @@ class Recorder(commands.Cog):
             await ctx.send("❌ Message not found (it might be deleted).")
             return
 
-        # Check Content
+        # Ignore Bots
+        if ref_msg.author.bot:
+            await ctx.send("❌ I cannot save messages from bots.")
+            return
+        # Ignore Webhooks (MimicBot messages)
+        if ref_msg.webhook_id is not None:
+            await ctx.send("❌ I cannot save webhook messages.")
+            return
+        # Ignore Links
+        if "http://" in ref_msg.content or "https://" in ref_msg.content:
+            await ctx.send("❌ I cannot save messages containing links.")
+            return
+        # Ignore Empty
         if not ref_msg.content:
             await ctx.send("❌ Cannot save empty messages.")
             return
@@ -80,19 +95,19 @@ class Recorder(commands.Cog):
             data = await cursor.fetchone()
 
             if data:
-                # If data != None, it means the quote exists
                 await ctx.send(
                     f"""
-                    ⚠️ I already have that quote saved for
-                    ** {ref_msg.author.display_name}**!
+                    ⚠️ I already have that quote saved for **{ref_msg.author.display_name}**!
                     """
                 )
                 return
 
             await db.execute(
                 """
-                INSERT INTO quotes (guild_id, user_id, content, timestamp, channel_id)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO quotes (
+                guild_id, user_id, content, timestamp,
+                channel_id, adder_user_id, added_timestamp, uses)
+                VALUES (?, ?, ?, ?, ?, ?, ?, 0)
                 """,
                 (
                     ctx.guild.id,
@@ -100,46 +115,124 @@ class Recorder(commands.Cog):
                     ref_msg.content,
                     str(orig_time),
                     orig_channel,
+                    ctx.author.id,
+                    int(discord.utils.utcnow().timestamp()),
                 ),
             )
             await db.commit()
 
-        logger.info(
-            f"💾 Saved quote in Guild {ctx.guild.id} from User {ref_msg.author.id}"
-        )
+        logger.info(f"💾 Saved quote in Guild {ctx.guild.id} from User {ref_msg.author.id}")
         await ctx.send(f'✅ Recorded: "{ref_msg.content}"')
 
-    # --- COMMAND: !9up @user ---
+    # --- COMMAND: 9up @user ---
+    # --- COMMAND: 9up @user ---
     @commands.command(name="9up")
     @not_blacklisted()
-    async def get_quote(self, ctx, member: discord.Member):
+    async def get_quote(self, ctx, member: Optional[discord.Member] = None, *, flags: str = ""):
         if not ctx.guild:
             return
 
+        # Check if -f is included
+        show_footer = "-f" in flags
+
         try:
             async with aiosqlite.connect(self.db_path) as db:
-                query = """
-                    SELECT content, timestamp, channel_id
-                    FROM quotes
-                    WHERE guild_id = ? AND user_id = ?
-                """
-                async with db.execute(query, (ctx.guild.id, member.id)) as cursor:
-                    rows = await cursor.fetchall()
+                if member:
+                    query = """
+                        SELECT id, content, timestamp, channel_id,
+                            user_id, adder_user_id, added_timestamp, uses
+                        FROM quotes
+                        WHERE guild_id = ?
+                        AND user_id = ?
+                        AND content NOT LIKE '%http%'
+                        ORDER BY RANDOM() LIMIT 1
+                    """
+                    params = (ctx.guild.id, member.id)
+                else:
+                    query = """
+                        SELECT id, content, timestamp, channel_id,
+                            user_id, adder_user_id, added_timestamp, uses
+                        FROM quotes
+                        WHERE guild_id = ?
+                        AND content NOT LIKE '%http%'
+                        ORDER BY RANDOM() LIMIT 1
+                    """
+                    params = (ctx.guild.id,)
 
-            if not rows:
-                await ctx.send(f"📜 No records for **{member.display_name}**.")
+                async with db.execute(query, params) as cursor:
+                    row = await cursor.fetchone()
+
+                if not row:
+                    if member:
+                        await ctx.send(f"📜 No clean records for **{member.display_name}**.")
+                    else:
+                        await ctx.send("📜 No valid quotes found in this server.")
+                    return
+
+                # Unpack new columns
+                (
+                    quote_id,
+                    content,
+                    timestamp_str,
+                    channel_id,
+                    author_id,
+                    adder_id,
+                    added_ts,
+                    uses,
+                ) = row
+
+                # --- INCREMENT USAGE COUNT ---
+                await db.execute("UPDATE quotes SET uses = uses + 1 WHERE id = ?", (quote_id,))
+                await db.commit()
+
+            # Resolve member if we are in "Random" mode
+            if member is None:
+                member = ctx.guild.get_member(author_id)
+                if not member:
+                    try:
+                        member = await ctx.guild.fetch_member(author_id)
+                    except discord.NotFound:
+
+                        class DummyMember:
+                            display_name = "Unknown User"
+                            display_avatar = ctx.guild.icon or discord.Embed.Empty
+                            color = discord.Color.default()
+                            bot = False
+
+                        member = DummyMember()
+
+            # --- RUNTIME BOT CHECK ---
+            if member.bot:
+                await ctx.send("🤖 Cannot add bot message.")
                 return
 
-            # Pick random
-            content, timestamp_str, channel_id = random.choice(rows)
+            mimic_name = f"🗣️ {member.display_name}"
 
-            # Format the extra info
-            # <t:123456:f>  : show "December 12, 2025 3:00 PM" in user's local time
-            # <#123>        : creates a clickable link to the channel
-            info_footer = f"\n\n*— <#{channel_id}> on <t:{timestamp_str}:f>*"
+            # --- PREPARE FOOTER EMBED ---
+            # We create a standalone embed for the footer metadata
+            footer_embed = None
+
+            if show_footer:
+                current_uses = uses + 1
+
+                adder_text = f"<@{adder_id}>" if adder_id else "System"
+                added_date_text = f"<t:{added_ts}:R>" if added_ts else "Unknown date"
+
+                footer_embed = discord.Embed(color=member.color)
+                # Row 1: Original Context
+                footer_embed.add_field(
+                    name="📜 Original", value=f"<#{channel_id}>\n<t:{timestamp_str}:f>", inline=True
+                )
+                # Row 2: Adder Info
+                footer_embed.add_field(
+                    name="✍️ Added By", value=f"{adder_text}\n{added_date_text}", inline=True
+                )
+                # Row 3: Stats
+                footer_embed.add_field(
+                    name="📊 Popularity", value=f"Triggered **{current_uses}** times", inline=False
+                )
 
             # --- WEBHOOK ---
-            # Checks if bot has permission to create webhooks
             perms = ctx.channel.permissions_for(ctx.guild.me)
             if perms.manage_webhooks:
                 try:
@@ -149,29 +242,68 @@ class Recorder(commands.Cog):
                         webhook = await ctx.channel.create_webhook(name="MimicBot")
 
                     await webhook.send(
-                        content=content + info_footer,
-                        username=member.display_name,
-                        avatar_url=member.display_avatar.url,
+                        content=content,
+                        username=mimic_name,
+                        avatar_url=member.display_avatar.url
+                        if hasattr(member.display_avatar, "url")
+                        else member.display_avatar,
+                        allowed_mentions=discord.AllowedMentions.none(),
+                        embed=footer_embed,
                     )
                     return
                 except Exception as e:
                     logger.warning(f"Webhook failed: {e}. Falling back to Embed.")
 
-            # --- fallback to embed if webhook failed ---
-            embed = discord.Embed(description=content, color=member.color)
-            embed.set_author(
-                name=member.display_name, icon_url=member.display_avatar.url
+            # --- Fallback to Embed ---
+            main_embed = discord.Embed(description=content, color=member.color)
+            main_embed.set_author(
+                name=mimic_name,
+                icon_url=member.display_avatar.url
+                if hasattr(member.display_avatar, "url")
+                else member.display_avatar,
             )
-            embed.add_field(
-                name="Context",
-                value=f"<#{channel_id}>\n<t:{timestamp_str}:R>",
-                inline=False,
-            )
-            await ctx.send(embed=embed)
+
+            # Merge footer fields into main embed if needed
+            if show_footer and footer_embed:
+                for field in footer_embed.fields:
+                    main_embed.add_field(name=field.name, value=field.value, inline=field.inline)
+
+            await ctx.send(embed=main_embed, allowed_mentions=discord.AllowedMentions.none())
 
         except Exception as e:
             logger.error(f"Database error during fetch: {e}")
             await ctx.send("❌ An internal database error occurred.")
+
+    # --- COMMAND: !9uplist @user ---
+    @commands.command(name="9uplist")
+    @not_blacklisted()
+    async def list_quotes(self, ctx, member: discord.Member):
+        if not ctx.guild:
+            return
+
+        # 1. Inhibit Bot Tagging
+        if member.bot:
+            await ctx.send("🤖 Bots do not have quote records.")
+            return
+
+        async with aiosqlite.connect(self.db_path) as db:
+            # 2. Updated Query: Added 'uses' column
+            query = """
+                SELECT content, added_timestamp, adder_user_id, uses
+                FROM quotes
+                WHERE guild_id = ? AND user_id = ?
+                ORDER BY added_timestamp DESC
+            """
+            async with db.execute(query, (ctx.guild.id, member.id)) as cursor:
+                rows = await cursor.fetchall()
+
+        if not rows:
+            await ctx.send(f"📜 No recorded quotes found for **{member.display_name}**.")
+            return
+
+        view = PaginationView(rows, f"Quotes by {member.display_name}", member)
+        embed = view.create_embed()
+        await ctx.send(embed=embed, view=view)
 
     # --- ERROR HANDLER ---
     @get_quote.error

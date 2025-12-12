@@ -1,11 +1,12 @@
 import logging
+
 import discord
 from discord.ext import commands
-from core.blacklist import blacklist_store
-from core.server_settings import server_settings
-from core.iam import is_owner
 
-# We keep the logger for INFO messages (like "Extension loaded")
+from core.blacklist import blacklist_store
+from core.iam import is_owner
+from core.server_settings import server_settings
+
 logger = logging.getLogger("bot.cogs.management")
 
 
@@ -20,13 +21,6 @@ class Management(commands.Cog):
             color=discord.Color.green(),
         )
 
-    # ---------------------------------------------------------
-    # ✂️ REMOVED: cog_command_error
-    # ✂️ REMOVED: _error_embed
-    # Reason: The Global ErrorHandler in 'cogs/errorhandler.py'
-    # now handles silence (stealth) and formatting for us.
-    # ---------------------------------------------------------
-
     # --- COMMAND: !reload ---
     @commands.command(hidden=True)
     @is_owner()
@@ -39,7 +33,6 @@ class Management(commands.Cog):
             await ctx.send(embed=self._success_embed("reloaded", cog_path))
             logger.info(f"Extension {cog_path} reloaded by {ctx.author}")
         except Exception as e:
-            # Raising triggers the Global Handler
             raise e
 
     # --- COMMAND: !load ---
@@ -93,7 +86,9 @@ class Management(commands.Cog):
             )
         )
 
-    # --- BLACKLIST COMMANDS ---
+    # ------ BLACKLIST COMMANDS ------#
+
+    # --- COMMAND: !blacklist ---
     @commands.command(hidden=True)
     @is_owner()
     async def blacklist(self, ctx, user: discord.User, command_name: str):
@@ -105,6 +100,7 @@ class Management(commands.Cog):
         else:
             await ctx.send(f"⚠️ **{user.name}** is already blacklisted.")
 
+    # --- COMMAND: !unblacklist ---
     @commands.command(hidden=True)
     @is_owner()
     async def unblacklist(self, ctx, user: discord.User, command_name: str):
@@ -116,6 +112,7 @@ class Management(commands.Cog):
         else:
             await ctx.send(f"⚠️ **{user.name}** was not blacklisted from `!{cmd}`.")
 
+    # --- COMMAND: !viewblacklist ---
     @commands.command(name="viewblacklist", hidden=True)
     @is_owner()
     async def view_blacklist(self, ctx):
@@ -140,15 +137,14 @@ class Management(commands.Cog):
             )
         )
 
+    # --- COMMAND: !setprefix ---
     @commands.command(hidden=True)
     @is_owner()
     async def setprefix(self, ctx, new_prefix: str):
-        """Changes the bot prefix for this server."""
         if len(new_prefix) > 5:
             await ctx.send("❌ Prefix is too long.")
             return
 
-        # 👇 Use the generic setter
         server_settings.set_val(ctx.guild.id, "prefix", new_prefix)
 
         await ctx.send(

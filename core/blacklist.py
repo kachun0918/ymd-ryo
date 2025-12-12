@@ -1,7 +1,7 @@
 import json
 import os
 
-# Define path constants for safety
+
 DATA_DIR = "data"
 BLACKLIST_FILE = os.path.join(DATA_DIR, "blacklist.json")
 
@@ -12,12 +12,10 @@ class BlacklistManager:
         self.data = self._load()
 
     def _ensure_dir(self):
-        """Creates the data directory if it doesn't exist."""
         if not os.path.exists(DATA_DIR):
             os.makedirs(DATA_DIR)
 
     def _load(self):
-        """Loads data safely, handling missing files or bad JSON."""
         if not os.path.exists(BLACKLIST_FILE):
             return {}
         try:

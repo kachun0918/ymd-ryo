@@ -1,8 +1,9 @@
 import discord
 from discord.ext import commands
 
-from .logger import setup_logging
 from core.server_settings import server_settings
+
+from .logger import setup_logging
 
 # Logger
 setup_logging()

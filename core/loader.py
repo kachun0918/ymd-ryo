@@ -1,7 +1,3 @@
-"""
-Scans the 'cogs' directory and loads all extensions.
-"""
-
 import logging
 import os
 
