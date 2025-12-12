@@ -49,7 +49,9 @@ class Recorder(commands.Cog):
 
         # Check if it is a Reply
         if not ctx.message.reference:
-            await ctx.send("❌ Please reply to a message with `!save` to record it.")
+            await ctx.send(
+                f"❌ Please reply to a message with `{ctx.prefix}save` to record it."
+            )
             return
 
         # Fetch the message
@@ -175,11 +177,11 @@ class Recorder(commands.Cog):
     @get_quote.error
     async def get_quote_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send("⚠️ Please tag a user. Usage: `!9up @User`")
+            await ctx.send(f"⚠️ Please tag a user. Usage: `{ctx.prefix}9up @User`")
         elif isinstance(error, commands.MemberNotFound):
             await ctx.send("⚠️ I couldn't find that user. ")
         else:
-            logger.error(f"Error in !9up: {error}")
+            logger.error(f"Error in 9up: {error}")
             await ctx.send("❌ An error occurred.")
 
 

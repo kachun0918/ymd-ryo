@@ -2,6 +2,7 @@ import logging
 import discord
 from discord.ext import commands
 from core.blacklist import blacklist_store
+from core.server_settings import server_settings
 from core.iam import is_owner
 
 # We keep the logger for INFO messages (like "Extension loaded")
@@ -137,6 +138,21 @@ class Management(commands.Cog):
                 description=desc,
                 color=discord.Color.dark_red(),
             )
+        )
+
+    @commands.command(hidden=True)
+    @is_owner()
+    async def setprefix(self, ctx, new_prefix: str):
+        """Changes the bot prefix for this server."""
+        if len(new_prefix) > 5:
+            await ctx.send("❌ Prefix is too long.")
+            return
+
+        # 👇 Use the generic setter
+        server_settings.set_val(ctx.guild.id, "prefix", new_prefix)
+
+        await ctx.send(
+            embed=self._success_embed("updated prefix", f"New prefix is `{new_prefix}`")
         )
 
 

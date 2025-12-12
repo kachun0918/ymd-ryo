@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 
 from .logger import setup_logging
+from core.server_settings import server_settings
 
 # Logger
 setup_logging()
@@ -10,11 +11,19 @@ setup_logging()
 intents = discord.Intents.default()
 intents.message_content = True
 
+
 # Instantiate
-bot = commands.Bot(command_prefix="!", intents=intents)
+def get_prefix(bot, message):
+    if not message.guild:
+        return "!"
+
+    return server_settings.get_prefix(message.guild.id)
 
 
-# 4. Define Standard Events
+bot = commands.Bot(command_prefix=get_prefix, intents=intents)
+
+
+# Define Standard Events
 @bot.event
 async def on_ready():
     import logging
