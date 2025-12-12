@@ -144,7 +144,6 @@ class Management(commands.Cog):
         await ctx.send(embed=self._success_embed("updated prefix", f"New prefix is `{new_prefix}`"))
 
     # --- COMMAND: !viewlogs ---
-    # --- COMMAND: !viewlogs ---
     @commands.command(name="logs", hidden=True)
     @is_owner()
     async def view_logs(self, ctx, lines: int = 10):
