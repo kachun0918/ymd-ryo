@@ -1,3 +1,5 @@
+.PHONY: update deploy logs
+
 update:
 	git pull
 	docker compose restart
