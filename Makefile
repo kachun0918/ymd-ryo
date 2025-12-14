@@ -1,20 +1,12 @@
-# Start the bot in the background (-d)
-up:
-	docker compose up -d --build
+update:
+	git pull
+	docker compose restart
 
-# Stop the bot
-down:
-	docker compose down
-
-# View logs 
 logs:
-	docker compose logs -f
+	docker compose logs -f --tail=100
 
-# Restart everything
-restart:
-	docker compose down
+deploy:
+	git pull
 	docker compose up -d --build
+	docker system prune -f 
 
-# Clean up unused docker junk
-clean:
-	docker system prune -f

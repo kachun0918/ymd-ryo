@@ -43,7 +43,6 @@ class Recorder(commands.Cog):
             )
             await db.execute("CREATE INDEX IF NOT EXISTS idx_uses ON quotes(uses DESC)")
             await db.commit()
-        logger.info("Database connection established")
 
     # --- COMMAND: !save ---
     @commands.command(name="save")

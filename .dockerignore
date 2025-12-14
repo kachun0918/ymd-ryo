@@ -13,6 +13,7 @@ __pycache__/
 # Ignore local data
 db/
 logs/
+data/
 
 # Ignore docker metadata
 Dockerfile
