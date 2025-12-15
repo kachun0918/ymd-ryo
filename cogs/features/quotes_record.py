@@ -246,17 +246,23 @@ class Recorder(commands.Cog):
             perms = ctx.channel.permissions_for(ctx.guild.me)
             if perms.manage_webhooks:
                 try:
-                    webhooks = await ctx.channel.webhooks()
+                    if isinstance(ctx.channel, discord.Thread):
+                        dest_channel = ctx.channel.parent
+                        is_thread = True
+                    else:
+                        dest_channel = ctx.channel
+                        is_thread = False
+
+                    webhooks = await dest_channel.webhooks()
                     webhook = discord.utils.get(webhooks, name="MimicBot")
                     if not webhook:
-                        webhook = await ctx.channel.create_webhook(name="MimicBot")
+                        webhook = await dest_channel.create_webhook(name="MimicBot")
 
                     await webhook.send(
                         content=content,
                         username=mimic_name,
-                        avatar_url=member.display_avatar.url
-                        if hasattr(member.display_avatar, "url")
-                        else member.display_avatar,
+                        avatar_url=member.display_avatar.url,
+                        thread=ctx.channel if is_thread else discord.utils.MISSING,
                         allowed_mentions=discord.AllowedMentions.none(),
                         embed=footer_embed,
                     )
