@@ -19,4 +19,4 @@ __pycache__
 
 # data
 *.json
-*.jpg
+data/img/*.jpg
