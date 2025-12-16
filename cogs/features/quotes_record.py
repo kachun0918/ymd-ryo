@@ -44,6 +44,7 @@ class Recorder(commands.Cog):
             await db.execute("CREATE INDEX IF NOT EXISTS idx_uses ON quotes(uses DESC)")
             await db.commit()
 
+
     # --- COMMAND: !save ---
     @commands.command(name="save")
     @not_blacklisted()
@@ -51,56 +52,61 @@ class Recorder(commands.Cog):
         if not ctx.guild:
             return
 
-        # Check if it is a Reply
+        async def send_error(text):
+            embed = discord.Embed(description=text, color=discord.Color.red())
+            await ctx.send(embed=embed)
+
+        # 1. Check if it is a Reply
         if not ctx.message.reference:
-            await ctx.send(f"❌ Please reply to a message with `{ctx.prefix}save` to record it.")
+            await send_error(f"❌ Please reply to a message with `{ctx.prefix}save` to record it.")
             return
 
-        # Fetch the message
+        # 2. Fetch the message
         try:
             ref_msg = await ctx.channel.fetch_message(ctx.message.reference.message_id)
         except discord.NotFound:
-            await ctx.send("❌ Message not found (it might be deleted).")
+            await send_error("❌ Message not found (it might be deleted).")
             return
 
-        # Ignore Bots
+        # 3. Validation Checks
         if ref_msg.author.bot:
-            await ctx.send("❌ I cannot save messages from bots.")
-            return
-        # Ignore Webhooks (MimicBot messages)
-        if ref_msg.webhook_id is not None:
-            await ctx.send("❌ I cannot save webhook messages.")
-            return
-        # Ignore Links
-        if "http://" in ref_msg.content or "https://" in ref_msg.content:
-            await ctx.send("❌ I cannot save messages containing links.")
-            return
-        # Ignore Empty
-        if not ref_msg.content:
-            await ctx.send("❌ Cannot save empty messages.")
+            await send_error("❌ I cannot save messages from bots.")
             return
 
+        if ref_msg.webhook_id is not None:
+            await send_error("❌ I cannot save webhook messages.")
+            return
+
+        if "http://" in ref_msg.content or "https://" in ref_msg.content:
+            await send_error("❌ I cannot save messages containing links.")
+            return
+
+        if not ref_msg.content:
+            await send_error("❌ Cannot save empty messages.")
+            return
+
+        # 4. Data Prep
         orig_time = int(ref_msg.created_at.timestamp())
         orig_channel = ref_msg.channel.id
 
-        # Check duplications
+        # 5. Database Interaction
         async with aiosqlite.connect(self.db_path) as db:
+            # Check duplications
             cursor = await db.execute(
-                """
-                SELECT id FROM quotes WHERE guild_id = ? AND user_id = ? AND content = ?
-                """,
+                "SELECT id FROM quotes WHERE guild_id = ? AND user_id = ? AND content = ?",
                 (ctx.guild.id, ref_msg.author.id, ref_msg.content),
             )
             data = await cursor.fetchone()
 
             if data:
-                await ctx.send(
-                    f"""
-                    ⚠️ I already have that quote saved for **{ref_msg.author.display_name}**!
-                    """
+                embed = discord.Embed(
+                    description=f"⚠️ I already have that quote saved for **{ref_msg.author.display_name}**!",
+                    color=discord.Color.gold()
                 )
+                await ctx.send(embed=embed)
                 return
 
+            # Insert new quote
             await db.execute(
                 """
                 INSERT INTO quotes (
@@ -120,6 +126,7 @@ class Recorder(commands.Cog):
             )
             await db.commit()
 
+        # 6. Logging
         log_guildname = ctx.guild.name.replace("\n", " ")
         if len(log_guildname) > 15:
             log_guildname = log_guildname[:12] + "..."
@@ -134,7 +141,19 @@ class Recorder(commands.Cog):
             f"Saved By: {ctx.author.display_name}, "
             f'Content: "{log_content}"'
         )
-        await ctx.send(f'✅ Recorded: "{ref_msg.content}"')
+
+        # 7. Success Embed
+        success_embed = discord.Embed(
+            description=f"**{ref_msg.content}**", 
+            color=discord.Color.green()
+        )
+        success_embed.set_author(
+            name=f"✅ Recorded: {ref_msg.author.display_name}", 
+            icon_url=ref_msg.author.display_avatar.url
+        )
+        success_embed.set_footer(text=f"Saved by {ctx.author.display_name}")
+        
+        await ctx.send(embed=success_embed)
 
     # --- COMMAND: 9up @user ---
     @commands.command(name="9up")
@@ -425,8 +444,6 @@ class Recorder(commands.Cog):
         # Send message and link it to the view (so view can edit it later)
         msg = await ctx.send(embed=embed, view=view)
         view.message = msg
-
-    
 
     # --- ERROR HANDLER ---
     @get_quote.error
