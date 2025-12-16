@@ -322,7 +322,7 @@ class Recorder(commands.Cog):
         await ctx.send(embed=embed, view=view)
 
     # --- COMMAND: !9uptop ---
-    @commands.command(name="9uptop", aliases=["9upbest", "topquotes"])
+    @commands.command(name="9uptop")
     @not_blacklisted()
     async def top_quotes(self, ctx, member: Optional[discord.Member] = None):
         """
@@ -344,7 +344,7 @@ class Recorder(commands.Cog):
                         LIMIT 10
                     """
                     params = (ctx.guild.id, member.id)
-                    title_text = f"🏆 9up: {member.display_name}'s Best Hits"
+                    title_text = f"🏆 9up: {member.display_name}"
                 else:
                     # --- Scenario B: Global Ranking ---
                     query = """
