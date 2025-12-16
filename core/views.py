@@ -1,5 +1,5 @@
 import discord
-
+import aiosqlite
 
 class PaginationView(discord.ui.View):
     def __init__(self, data, title, member, per_page=5):
@@ -30,7 +30,7 @@ class PaginationView(discord.ui.View):
         num_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
 
         for i, item in enumerate(page_items):
-            content, added_ts, adder_id, uses = item
+            content, added_ts, adder_id, uses, _ = item
 
             clean_content = content.replace("\n", " ")
             if len(clean_content) > 60:
@@ -74,3 +74,104 @@ class PaginationView(discord.ui.View):
             pass
         except Exception:
             pass
+
+
+class DeleteQuoteView(PaginationView):
+    def __init__(self, data, title, member, ctx, db_path):
+        # Initialize the parent PaginationView
+        super().__init__(data, title, member, per_page=5)
+        self.ctx = ctx
+        self.db_path = db_path
+        self.selected_item = None # Stores the quote trying to be deleted
+
+        # Add the selection buttons (1-5) dynamically
+        for i in range(1, 6):
+            button = discord.ui.Button(label=str(i), style=discord.ButtonStyle.blurple, custom_id=f"select_{i}")
+            button.callback = self.select_callback
+            self.add_item(button)
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        # Only the person who typed !9updelete can interact
+        if interaction.user != self.ctx.author:
+            await interaction.response.send_message("❌ You cannot control this menu.", ephemeral=True)
+            return False
+        return True
+
+    async def select_callback(self, interaction: discord.Interaction):
+        # 1. Figure out which quote was clicked
+        button_num = int(interaction.data["custom_id"].split("_")[1]) - 1
+        start_index = self.current_page * self.per_page
+        item_index = start_index + button_num
+
+        # 2. Safety Check: Does this item exist? (e.g. Page 2 might only have 3 items)
+        if item_index >= len(self.data):
+            await interaction.response.send_message("❌ Invalid selection.", ephemeral=True)
+            return
+
+        # 3. Get Quote Data
+        # Assuming data structure is: (content, added_ts, adder_id, uses, quote_id)
+        # We need quote_id to delete. You might need to update your SELECT query to include ID.
+        quote = self.data[item_index]
+        self.selected_item = quote
+        
+        # Unpack based on your query structure
+        # (content, added_ts, adder_id, uses, quote_id)
+        content, _, adder_id, _, quote_id = quote
+
+        # 4. Permission Check (Adder or Admin)
+        is_admin = interaction.user.guild_permissions.administrator
+        is_adder = (interaction.user.id == adder_id)
+
+        if not (is_admin or is_adder):
+            await interaction.response.send_message("⛔ You did not add this quote, so you cannot delete it.", ephemeral=True)
+            return
+
+        # 5. Confirmation Dialog
+        confirm_view = ConfirmDeleteView(self)
+        await interaction.response.send_message(
+            f"⚠️ **Delete this quote?**\n> {content}", 
+            view=confirm_view, 
+            ephemeral=True
+        )
+
+    async def delete_quote(self, interaction: discord.Interaction):
+        """Called by ConfirmDeleteView when user clicks YES"""
+        if not self.selected_item: return
+
+        # Get the ID (assuming it is the last item in the tuple now)
+        quote_id = self.selected_item[-1] 
+
+        async with aiosqlite.connect(self.db_path) as db:
+            await db.execute("DELETE FROM quotes WHERE id = ?", (quote_id,))
+            await db.commit()
+        
+        # Remove from local list and refresh UI
+        self.data.remove(self.selected_item)
+        self.total_pages = max(1, (len(self.data) + self.per_page - 1) // self.per_page)
+        
+        # If page is now empty, go back one page
+        if self.current_page >= self.total_pages:
+            self.current_page = max(0, self.total_pages - 1)
+            
+        self.update_buttons()
+        
+        await interaction.response.edit_message(content="✅ **Deleted!**", view=None)
+        
+        # Update the main list message
+        await self.message.edit(embed=self.create_embed(), view=self)
+
+
+class ConfirmDeleteView(discord.ui.View):
+    def __init__(self, parent_view):
+        super().__init__(timeout=30)
+        self.parent = parent_view
+
+    @discord.ui.button(label="Confirm", style=discord.ButtonStyle.danger, emoji="✅")
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.parent.delete_quote(interaction)
+        self.stop()
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary, emoji="❌")
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.edit_message(content="❌ Cancelled.", view=None)
+        self.stop()

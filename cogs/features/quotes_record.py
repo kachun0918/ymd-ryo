@@ -7,7 +7,7 @@ import discord
 from discord.ext import commands
 
 from core.iam import not_blacklisted
-from core.views import PaginationView
+from core.views import PaginationView, DeleteQuoteView
 
 logger = logging.getLogger("discord.recorder")
 
@@ -320,6 +320,118 @@ class Recorder(commands.Cog):
         view = PaginationView(rows, f"Quotes by {member.display_name}", member)
         embed = view.create_embed()
         await ctx.send(embed=embed, view=view)
+
+    # --- COMMAND: !9uptop ---
+
+    @commands.command(name="9uptop", aliases=["9upbest", "topquotes"])
+    @not_blacklisted()
+    async def top_quotes(self, ctx, member: Optional[discord.Member] = None):
+        """
+        Shows the top 10 most used quotes.
+        Usage: !9uptop (Global) OR !9uptop @User (User specific)
+        """
+        if not ctx.guild:
+            return
+
+        async with ctx.typing():
+            async with aiosqlite.connect(self.db_path) as db:
+                if member:
+                    # --- Scenario A: Specific User Ranking ---
+                    query = """
+                        SELECT content, user_id, uses
+                        FROM quotes
+                        WHERE guild_id = ? AND user_id = ? AND uses > 0
+                        ORDER BY uses DESC
+                        LIMIT 10
+                    """
+                    params = (ctx.guild.id, member.id)
+                    title_text = f"🏆 9up: {member.display_name}'s Best Hits"
+                else:
+                    # --- Scenario B: Global Ranking ---
+                    query = """
+                        SELECT content, user_id, uses
+                        FROM quotes
+                        WHERE guild_id = ? AND uses > 0
+                        ORDER BY uses DESC
+                        LIMIT 10
+                    """
+                    params = (ctx.guild.id,)
+                    title_text = "🏆 9up: Server Hall of Fame"
+
+                async with db.execute(query, params) as cursor:
+                    rows = await cursor.fetchall()
+
+            if not rows:
+                if member:
+                    await ctx.send(f"📜 **{member.display_name}** has no highly used quotes yet.")
+                else:
+                    await ctx.send("📜 No quotes have been used yet.")
+                return
+
+            # 2. Build Embed
+            embed = discord.Embed(
+                title=title_text,
+                color=member.color if member else discord.Color.gold()
+            )
+
+            leaderboard_text = ""
+            medals = ["🥇", "🥈", "🥉"]
+
+            for index, (content, user_id, uses) in enumerate(rows):
+                # Resolve User Name logic
+                if member:
+                    # If we are filtering by user, we already know the name
+                    name = member.display_name
+                else:
+                    # If global, we must fetch the user for this specific row
+                    row_member = ctx.guild.get_member(user_id)
+                    name = row_member.display_name if row_member else "Unknown"
+
+                # Truncate long quotes
+                display_content = content.replace("\n", " ")
+                if len(display_content) > 40:
+                    display_content = display_content[:37] + "..."
+
+                # Formatting
+                rank = medals[index] if index < 3 else f"`#{index + 1}`"
+                
+                # If it's a specific user list, we don't really need to repeat "by User" every line, 
+                # but sticking to your format keeps it consistent.
+                leaderboard_text += f"{rank} 「{display_content}」\nby *{name}* • **{uses}** uses\n\n"
+
+            embed.description = leaderboard_text
+            await ctx.send(embed=embed)
+
+    # --- COMMAND: !9updelete @user ---
+    @commands.command(name="9updel")
+    @not_blacklisted()
+    async def delete_quote_menu(self, ctx, member: discord.Member):
+        if not ctx.guild: return
+
+        async with aiosqlite.connect(self.db_path) as db:
+            # ⚠️ CHANGED QUERY: Added 'id' at the end to identify rows for deletion
+            query = """
+                SELECT content, added_timestamp, adder_user_id, uses, id
+                FROM quotes
+                WHERE guild_id = ? AND user_id = ?
+                ORDER BY added_timestamp DESC
+            """
+            async with db.execute(query, (ctx.guild.id, member.id)) as cursor:
+                rows = await cursor.fetchall()
+
+        if not rows:
+            await ctx.send(f"📜 No recorded quotes found for **{member.display_name}**.")
+            return
+
+        # Create View
+        view = DeleteQuoteView(rows, f"Delete Quote: {member.display_name}", member, ctx, self.db_path)
+        embed = view.create_embed()
+        
+        # Send message and link it to the view (so view can edit it later)
+        msg = await ctx.send(embed=embed, view=view)
+        view.message = msg
+
+    
 
     # --- ERROR HANDLER ---
     @get_quote.error
