@@ -54,7 +54,7 @@ class Recorder(commands.Cog):
 
         async def send_error(text):
             embed = discord.Embed(
-                title="❌ Error",
+                title="❌ error",
                 description=text, 
                 color=discord.Color.red())
             await ctx.send(embed=embed)
@@ -150,7 +150,7 @@ class Recorder(commands.Cog):
             color=discord.Color.green()
         )
         success_embed.set_author(
-            name=f"✅ Recorded: {ref_msg.author.display_name}", 
+            name=f"✅ Recorded", 
             icon_url=ref_msg.author.display_avatar.url
         )
         success_embed.set_footer(text=f"Saved by {ctx.author.display_name}")
