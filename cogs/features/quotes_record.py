@@ -322,7 +322,7 @@ class Recorder(commands.Cog):
         await ctx.send(embed=embed, view=view)
 
     # --- COMMAND: !9uptop ---
-
+    # --- COMMAND: !9uptop ---
     @commands.command(name="9uptop", aliases=["9upbest", "topquotes"])
     @not_blacklisted()
     async def top_quotes(self, ctx, member: Optional[discord.Member] = None):
@@ -378,26 +378,42 @@ class Recorder(commands.Cog):
             medals = ["🥇", "🥈", "🥉"]
 
             for index, (content, user_id, uses) in enumerate(rows):
-                # Resolve User Name logic
-                if member:
-                    # If we are filtering by user, we already know the name
-                    name = member.display_name
-                else:
-                    # If global, we must fetch the user for this specific row
-                    row_member = ctx.guild.get_member(user_id)
-                    name = row_member.display_name if row_member else "Unknown"
-
-                # Truncate long quotes
+                # --- TRUNCATE ---
                 display_content = content.replace("\n", " ")
                 if len(display_content) > 40:
                     display_content = display_content[:37] + "..."
-
-                # Formatting
-                rank = medals[index] if index < 3 else f"`#{index + 1}`"
                 
-                # If it's a specific user list, we don't really need to repeat "by User" every line, 
-                # but sticking to your format keeps it consistent.
-                leaderboard_text += f"{rank} 「{display_content}」\nby *{name}* • **{uses}** uses\n\n"
+                # --- RANK EMOJI ---
+                rank = medals[index] if index < 3 else f"`#{index + 1}`"
+
+                # --- FORMATTING LOGIC ---
+                if member:
+                    # SCENARIO A: User Specific (Cleaner format)
+                    leaderboard_text += f"{rank} 「{display_content}」 • **{uses}** uses\n\n"
+                
+                else:
+                    # SCENARIO B: Global (Needs Name)
+                    
+                    # 1. Try Cache
+                    row_member = ctx.guild.get_member(user_id)
+                    
+                    if row_member:
+                        name = row_member.display_name
+                    else:
+                        # 2. Try Fetching Member (API)
+                        try:
+                            row_member = await ctx.guild.fetch_member(user_id)
+                            name = row_member.display_name
+                        except discord.NotFound:
+                            # 3. User likely left the server. Try fetching Global User.
+                            try:
+                                user = await self.bot.fetch_user(user_id)
+                                name = user.name  # Fallback to their username
+                            except discord.NotFound:
+                                # 4. Account deleted or invalid
+                                name = f"User {user_id}"
+
+                    leaderboard_text += f"{rank} 「{display_content}」\nby *{name}* • **{uses}** uses\n\n"
 
             embed.description = leaderboard_text
             await ctx.send(embed=embed)
