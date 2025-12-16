@@ -322,7 +322,6 @@ class Recorder(commands.Cog):
         await ctx.send(embed=embed, view=view)
 
     # --- COMMAND: !9uptop ---
-    # --- COMMAND: !9uptop ---
     @commands.command(name="9uptop", aliases=["9upbest", "topquotes"])
     @not_blacklisted()
     async def top_quotes(self, ctx, member: Optional[discord.Member] = None):
@@ -356,7 +355,7 @@ class Recorder(commands.Cog):
                         LIMIT 10
                     """
                     params = (ctx.guild.id,)
-                    title_text = "🏆 9up: Server Hall of Fame"
+                    title_text = "🏆 9up"
 
                 async with db.execute(query, params) as cursor:
                     rows = await cursor.fetchall()
@@ -386,34 +385,14 @@ class Recorder(commands.Cog):
                 # --- RANK EMOJI ---
                 rank = medals[index] if index < 3 else f"`#{index + 1}`"
 
-                # --- FORMATTING LOGIC ---
+                # --- FORMATTING ---
                 if member:
-                    # SCENARIO A: User Specific (Cleaner format)
+                    # Scenario A: Specific User
                     leaderboard_text += f"{rank} 「{display_content}」 • **{uses}** uses\n\n"
-                
                 else:
-                    # SCENARIO B: Global (Needs Name)
-                    
-                    # 1. Try Cache
-                    row_member = ctx.guild.get_member(user_id)
-                    
-                    if row_member:
-                        name = row_member.display_name
-                    else:
-                        # 2. Try Fetching Member (API)
-                        try:
-                            row_member = await ctx.guild.fetch_member(user_id)
-                            name = row_member.display_name
-                        except discord.NotFound:
-                            # 3. User likely left the server. Try fetching Global User.
-                            try:
-                                user = await self.bot.fetch_user(user_id)
-                                name = user.name  # Fallback to their username
-                            except discord.NotFound:
-                                # 4. Account deleted or invalid
-                                name = f"User {user_id}"
-
-                    leaderboard_text += f"{rank} 「{display_content}」\nby *{name}* • **{uses}** uses\n\n"
+                    # Scenario B: Global
+                    # We use <@user_id> to let the Discord Client render the name for us.
+                    leaderboard_text += f"{rank} 「{display_content}」\nby <@{user_id}> • **{uses}** uses\n\n"
 
             embed.description = leaderboard_text
             await ctx.send(embed=embed)
