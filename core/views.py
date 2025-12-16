@@ -32,7 +32,7 @@ class PaginationView(discord.ui.View):
         num_emojis = ["1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣"]
 
         for i, item in enumerate(page_items):
-            content, added_ts, adder_id, uses, _ = item
+            content, added_ts, adder_id, uses = item
 
             clean_content = content.replace("\n", " ")
             if len(clean_content) > 60:
