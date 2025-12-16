@@ -53,36 +53,38 @@ class Recorder(commands.Cog):
             return
 
         async def send_error(text):
-            embed = discord.Embed(description=text, color=discord.Color.red())
+            embed = discord.Embed(
+                title="❌ Error",
+                description=text, 
+                color=discord.Color.red())
             await ctx.send(embed=embed)
 
-        # 1. Check if it is a Reply
         if not ctx.message.reference:
-            await send_error(f"❌ Please reply to a message with `{ctx.prefix}save` to record it.")
+            await send_error(f"Please reply to a message with `{ctx.prefix}save` to record it.")
             return
 
         # 2. Fetch the message
         try:
             ref_msg = await ctx.channel.fetch_message(ctx.message.reference.message_id)
         except discord.NotFound:
-            await send_error("❌ Message not found (it might be deleted).")
+            await send_error("Message not found (it might be deleted).")
             return
 
         # 3. Validation Checks
         if ref_msg.author.bot:
-            await send_error("❌ I cannot save messages from bots.")
+            await send_error("I cannot save messages from bots.")
             return
 
         if ref_msg.webhook_id is not None:
-            await send_error("❌ I cannot save webhook messages.")
+            await send_error("I cannot save webhook messages.")
             return
 
         if "http://" in ref_msg.content or "https://" in ref_msg.content:
-            await send_error("❌ I cannot save messages containing links.")
+            await send_error("I cannot save messages containing links.")
             return
 
         if not ref_msg.content:
-            await send_error("❌ Cannot save empty messages.")
+            await send_error("Cannot save empty messages.")
             return
 
         # 4. Data Prep
