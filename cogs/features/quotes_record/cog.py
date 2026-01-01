@@ -5,10 +5,11 @@ from discord.ext import commands
 
 from core.iam import not_blacklisted
 from core.ui import UI
-from core.views import DeleteQuoteView, PaginationView
+from core.views import PaginationView
 
 from .db import QuoteManager
 from .helpers import is_saveable, send_mimic_message
+from .views import DeleteQuoteView
 
 
 class Quotes(commands.Cog):

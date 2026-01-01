@@ -1,11 +1,13 @@
+import json
+import logging
+import os
+import random
+
 import discord
 from discord.ext import commands
-import json
-import random
-import os
-import logging
 
 logger = logging.getLogger("bot.dllm")
+
 
 class dllm(commands.Cog):
     def __init__(self, bot):
@@ -41,7 +43,6 @@ class dllm(commands.Cog):
 
     @commands.command(aliases=["sticker", "gif"])
     async def dllm(self, ctx):
-        
         if not self.links:
             return await ctx.send("❌ No assets loaded!")
 
@@ -54,14 +55,14 @@ class dllm(commands.Cog):
         if ctx.channel.permissions_for(ctx.guild.me).manage_webhooks:
             try:
                 webhook, is_thread = await self._get_webhook(ctx)
-                
+
                 await webhook.send(
                     content=sticker_url,
                     username=ctx.author.display_name,
                     avatar_url=ctx.author.display_avatar.url,
-                    thread=ctx.channel if is_thread else discord.utils.MISSING
+                    thread=ctx.channel if is_thread else discord.utils.MISSING,
                 )
-                return 
+                return
             except Exception as e:
                 logger.error(f"Webhook impersonation failed: {e}")
 
@@ -73,6 +74,7 @@ class dllm(commands.Cog):
     async def reload_dllm(self, ctx):
         self._load_links()
         await ctx.send(f"🔄 Reloaded! Total assets: **{len(self.links)}**")
+
 
 async def setup(bot):
     await bot.add_cog(dllm(bot))
