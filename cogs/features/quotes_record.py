@@ -1,3 +1,4 @@
+'''
 import logging
 import os
 from typing import Optional
@@ -55,7 +56,7 @@ class Recorder(commands.Cog):
         async def send_error(text):
             embed = discord.Embed(
                 title="❌ error",
-                description=text, 
+                description=text,
                 color=discord.Color.red())
             await ctx.send(embed=embed)
 
@@ -146,15 +147,15 @@ class Recorder(commands.Cog):
 
         # 7. Success Embed
         success_embed = discord.Embed(
-            description=f"**{ref_msg.content}**", 
+            description=f"**{ref_msg.content}**",
             color=discord.Color.green()
         )
         success_embed.set_author(
-            name=f"✅ Recorded", 
+            name=f"✅ Recorded",
             icon_url=ref_msg.author.display_avatar.url
         )
         success_embed.set_footer(text=f"Saved by {ctx.author.display_name}")
-        
+
         await ctx.send(embed=success_embed)
 
     # --- COMMAND: 9up @user ---
@@ -402,7 +403,7 @@ class Recorder(commands.Cog):
                 display_content = content.replace("\n", " ")
                 if len(display_content) > 40:
                     display_content = display_content[:37] + "..."
-                
+
                 # --- RANK EMOJI ---
                 rank = medals[index] if index < 3 else f"`#{index + 1}`"
 
@@ -442,7 +443,7 @@ class Recorder(commands.Cog):
         # Create View
         view = DeleteQuoteView(rows, f"Delete Quote: {member.display_name}", member, ctx, self.db_path)
         embed = view.create_embed()
-        
+
         # Send message and link it to the view (so view can edit it later)
         msg = await ctx.send(embed=embed, view=view)
         view.message = msg
@@ -462,3 +463,5 @@ class Recorder(commands.Cog):
 # Standard setup hook
 async def setup(bot):
     await bot.add_cog(Recorder(bot))
+
+'''

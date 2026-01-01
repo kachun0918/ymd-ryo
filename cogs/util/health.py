@@ -42,7 +42,7 @@ class Health(commands.Cog):
                 name="🏓 Latency", value=f"`{round(self.bot.latency * 1000)}ms`", inline=True
             )
             embed.add_field(name="⏱️ Uptime", value=f"`{self._get_uptime()}`", inline=True)
-            embed.add_field(name="💻 OS", value=f"`{platform.system()} (Docker)`", inline=True)
+            embed.add_field(name="💻 OS", value=f"`{platform.system()}`", inline=True)
 
             embed.add_field(name="🧠 RAM Usage", value=f"`{ram_usage:.2f} MB`", inline=True)
             embed.add_field(name="⚙️ CPU Load", value=f"`{cpu_usage}%`", inline=True)
