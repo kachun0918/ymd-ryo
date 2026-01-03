@@ -4,14 +4,11 @@ services:
     build: .
     restart: always
     
-    environment:
-      - DISCORD_TOKEN=${DISCORD_TOKEN}
-      - OWNER_ID=${OWNER_ID}
+    env_file:
+      - ${NAS_PATH}/.env
 
     volumes:
-      - ${PATH}/db:/app/db
-      - ${PATH}/logs:/app/logs
-      - ${PATH}/data:/app/data
-      
-      # Persist yt-dlp cache so it doesn't re-download headers every restart
-      - ${PATH}/data/cache:/.cache/yt-dlp
+      - ${NAS_PATH}/db:/app/db
+      - ${NAS_PATH}/logs:/app/logs
+      - ${NAS_PATH}/data:/app/data
+      - ${NAS_PATH}/data/cache:/.cache/yt-dlp
