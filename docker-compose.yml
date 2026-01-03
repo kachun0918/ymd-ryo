@@ -1,12 +1,17 @@
 services:
   yamada-bot:
-    build: .
     container_name: yamada_ryo_bot
+    build: .
     restart: always
-    env_file:
-      - .env
+    
+    environment:
+      - DISCORD_TOKEN=${DISCORD_TOKEN}
+      - OWNER_ID=${OWNER_ID}
+
     volumes:
-      - ./db:/app/db
-      - ./logs:/app/logs
-      - ./data:/app/data
-      - ./data/cache:/.cache/yt-dlp
+      - ${PATH}/db:/app/db
+      - ${PATH}/logs:/app/logs
+      - ${PATH}/data:/app/data
+      
+      # Persist yt-dlp cache so it doesn't re-download headers every restart
+      - ${PATH}/data/cache:/.cache/yt-dlp
