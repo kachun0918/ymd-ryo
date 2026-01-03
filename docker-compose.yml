@@ -1,8 +1,10 @@
 services:
   yamada-bot:
-    container_name: yamada_ryo_bot
-    build: .
+    image: kachun0918/ymd-bot:latest
+
     restart: always
+    env_file:
+      - ${NAS_PATH}/.env
     volumes:
       - ${NAS_PATH}/db:/app/db
       - ${NAS_PATH}/logs:/app/logs
