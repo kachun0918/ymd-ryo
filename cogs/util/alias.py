@@ -19,8 +19,13 @@ class Alias(commands.Cog):
     async def add_alias(self, ctx, target: discord.Member, alias_name: str):
         clean_name = alias_name.lower()
 
-        if clean_name in ["me", "bot", "all"]:
+        if clean_name in ["me", "bot", "all", "here", "everyone"]:
             return await ctx.send(embed=UI.warn("Invalid Alias", "That name is reserved."))
+
+        if target.bot:
+            return await ctx.send(
+                embed=UI.warn("Invalid Target", "You cannot create an alias for a bot.")
+            )
 
         async with aiosqlite.connect(DB_PATH) as db:
             try:

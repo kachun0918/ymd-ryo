@@ -35,7 +35,9 @@ class Management(commands.Cog):
     @commands.Cog.listener()
     async def on_command(self, ctx):
         cog_name = ctx.cog.__class__.__name__ if ctx.cog else "Unknown"
-        logger.info(f"[{cog_name}] {ctx.author.display_name} triggered {ctx.command.name}")
+        logger.info(
+            f"[{cog_name}] {ctx.author.display_name} triggered {ctx.command.name} in {ctx.channel.name}"
+        )
 
     # --- COMMAND: !reload ---
     @commands.command(hidden=True)

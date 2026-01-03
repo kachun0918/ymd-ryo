@@ -5,6 +5,7 @@ from discord.ext import commands
 
 from core.alias import AliasedGlobal
 from core.iam import not_blacklisted
+from core.profiler import profile_command
 from core.ui import UI
 from core.views import PaginationView
 
@@ -59,6 +60,7 @@ class Quotes(commands.Cog):
 
     # --- COMMAND: !9up or !9up @user/alias ---
     @commands.command(name="9up")
+    @profile_command
     @not_blacklisted()
     async def get_quote(self, ctx, member: Optional[AliasedGlobal] = None, *, flags: str = ""):
         """
