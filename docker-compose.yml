@@ -1,6 +1,6 @@
 services:
   yamada-bot:
-    image: kachun0918/ymd-bot:latest
+    image: tokachun/ymd-bot:latest
 
     restart: always
     env_file:
