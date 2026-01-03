@@ -3,6 +3,9 @@ services:
     container_name: yamada_ryo_bot
     image: tokachun/ymd-ryo:latest
     restart: always
+
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
   
     volumes:
       - ${NAS_PATH}/db:/app/db
@@ -10,3 +13,12 @@ services:
       - ${NAS_PATH}/data:/app/data
       - ${NAS_PATH}/data/cache:/.cache/yt-dlp
       - ${NAS_PATH}/.env:/app/.env
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    
+    command: --interval 300 --label-enable
