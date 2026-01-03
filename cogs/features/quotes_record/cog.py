@@ -3,6 +3,7 @@ from typing import Optional
 import discord
 from discord.ext import commands
 
+from core.alias import AliasedGlobal
 from core.iam import not_blacklisted
 from core.ui import UI
 from core.views import PaginationView
@@ -56,10 +57,14 @@ class Quotes(commands.Cog):
                 )
             )
 
-    # --- COMMAND: !9up or !9up @user ---
+    # --- COMMAND: !9up or !9up @user/alias ---
     @commands.command(name="9up")
     @not_blacklisted()
-    async def get_quote(self, ctx, member: Optional[discord.Member] = None, *, flags: str = ""):
+    async def get_quote(self, ctx, member: Optional[AliasedGlobal] = None, *, flags: str = ""):
+        """
+        Fetches a random quote.
+        Accepts: @User, UserID, Username, or Alias.
+        """
         row = await self.db.get_random_quote(ctx.guild.id, member.id if member else None)
 
         if not row:
@@ -101,10 +106,11 @@ class Quotes(commands.Cog):
 
         await send_mimic_message(ctx, target_member, content, footer_embed)
 
-    # --- COMMAND: !9uplist @user ---
+    # --- COMMAND: !9uplist @user/alias ---
     @commands.command(name="9uplist")
     @not_blacklisted()
-    async def list_quotes(self, ctx, member: discord.Member):
+    # 3. Update Type Hint here too
+    async def list_quotes(self, ctx, member: AliasedGlobal):
         if member.bot:
             return await ctx.send(embed=UI.warn("Bots do not have quotes."))
 
@@ -119,10 +125,11 @@ class Quotes(commands.Cog):
         embed = view.create_embed()
         await ctx.send(embed=embed, view=view)
 
-    # --- COMMAND: !9uptop / !9uptop @user  ---
+    # --- COMMAND: !9uptop / !9uptop @user/alias ---
     @commands.command(name="9uptop")
     @not_blacklisted()
-    async def top_quotes(self, ctx, member: Optional[discord.Member] = None):
+    # 4. Update Type Hint here too
+    async def top_quotes(self, ctx, member: Optional[AliasedGlobal] = None):
         async with ctx.typing():
             rows = await self.db.get_top_quotes(ctx.guild.id, member.id if member else None)
 
@@ -161,10 +168,11 @@ class Quotes(commands.Cog):
             embed.description = leaderboard_text
             await ctx.send(embed=embed)
 
-    # --- COMMAND: !9updel / !9updel @user ---
+    # --- COMMAND: !9updel / !9updel @user/alias ---
     @commands.command(name="9updel")
     @not_blacklisted()
-    async def delete_quote_menu(self, ctx, member: discord.Member):
+    # 5. Update Type Hint here too
+    async def delete_quote_menu(self, ctx, member: AliasedGlobal):
         rows = await self.db.get_quotes_for_deletion(ctx.guild.id, member.id)
 
         if not rows:
@@ -188,7 +196,8 @@ class Quotes(commands.Cog):
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(embed=UI.warn(f"Please tag a user. Usage: `{ctx.prefix}9up @User`"))
         elif isinstance(error, commands.MemberNotFound):
-            await ctx.send(embed=UI.warn("I couldn't find that user."))
+            # This error message now applies to both invalid User IDs AND invalid Aliases
+            await ctx.send(embed=UI.warn("User or Alias not found."))
 
 
 async def setup(bot):
