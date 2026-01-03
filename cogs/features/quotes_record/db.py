@@ -1,5 +1,6 @@
 import logging
 import os
+import random
 import time
 from typing import List, Optional, Tuple
 
@@ -87,25 +88,42 @@ class QuoteManager:
         self, guild_id: int, user_id: Optional[int] = None
     ) -> Optional[Tuple]:
         """
-        Fetches a random quote.
-        Returns: (id, content, timestamp, channel_id, user_id, adder_id, added_ts, uses)
+        Fetches a random quote using OFFSET method (O(N) Scan)
         """
         async with aiosqlite.connect(self.db_path) as db:
-            query = """
-                SELECT id, content, timestamp, channel_id, 
-                       user_id, adder_user_id, added_timestamp, uses
-                FROM quotes
-                WHERE guild_id = ? AND content NOT LIKE '%http%'
-            """
+            where_clauses = ["guild_id = ?", "content NOT LIKE '%http%'"]
             params = [guild_id]
 
             if user_id:
-                query += " AND user_id = ?"
+                where_clauses.append("user_id = ?")
                 params.append(user_id)
 
-            query += " ORDER BY RANDOM() LIMIT 1"
+            where_str = " AND ".join(where_clauses)
 
-            async with db.execute(query, tuple(params)) as cursor:
+            # Count how many valid quotes exist
+            count_query = f"SELECT COUNT(*) FROM quotes WHERE {where_str}"
+            async with db.execute(count_query, tuple(params)) as cursor:
+                row = await cursor.fetchone()
+                total_count = row[0] if row else 0
+
+            if total_count == 0:
+                return None
+
+            # Pick a random index in Python
+            random_offset = random.randint(0, total_count - 1)
+
+            # Jump directly to that index
+            fetch_query = f"""
+                SELECT id, content, timestamp, channel_id,
+                       user_id, adder_user_id, added_timestamp, uses
+                FROM quotes
+                WHERE {where_str}
+                LIMIT 1 OFFSET ?
+            """
+            # Add the offset to the params list
+            fetch_params = params + [random_offset]
+
+            async with db.execute(fetch_query, tuple(fetch_params)) as cursor:
                 row = await cursor.fetchone()
 
             if row:
