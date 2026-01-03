@@ -87,11 +87,10 @@ class QuoteManager:
     async def get_random_quote(
         self, guild_id: int, user_id: Optional[int] = None
     ) -> Optional[Tuple]:
-        logger.info("🟢 [VERIFICATION] CODE_VERSION_v5_OFFSET_LOGIC")
-        """
-        Fetches a random quote using OFFSET method (O(N) Scan)
-        """
+        logger.info("⚡ [OPTIMIZED] Using ID-Lottery Strategy")
+
         async with aiosqlite.connect(self.db_path) as db:
+            # Build the filter
             where_clauses = ["guild_id = ?", "content NOT LIKE '%http%'"]
             params = [guild_id]
 
@@ -101,35 +100,33 @@ class QuoteManager:
 
             where_str = " AND ".join(where_clauses)
 
-            # Count how many valid quotes exist
-            count_query = f"SELECT COUNT(*) FROM quotes WHERE {where_str}"
-            async with db.execute(count_query, tuple(params)) as cursor:
-                row = await cursor.fetchone()
-                total_count = row[0] if row else 0
+            # Get ALL matching IDs only (Fast, tiny data)
+            # We don't touch the heavy 'content' column or 'blob' data yet
+            cursor = await db.execute(f"SELECT id FROM quotes WHERE {where_str}", tuple(params))
+            rows = await cursor.fetchall()
 
-            if total_count == 0:
+            if not rows:
                 return None
 
-            # Pick a random index in Python
-            random_offset = random.randint(0, total_count - 1)
+            # Pick a random ID in Python (Instant)
+            random_row = random.choice(rows)
+            target_id = random_row[0]
 
-            # Jump directly to that index
-            fetch_query = f"""
+            # Fetch the FULL data for that ONE specific ID (Instant)
+            # No scanning, direct lookup by Primary Key
+            fetch_query = """
                 SELECT id, content, timestamp, channel_id,
                        user_id, adder_user_id, added_timestamp, uses
                 FROM quotes
-                WHERE {where_str}
-                LIMIT 1 OFFSET ?
+                WHERE id = ?
             """
-            # Add the offset to the params list
-            fetch_params = params + [random_offset]
 
-            async with db.execute(fetch_query, tuple(fetch_params)) as cursor:
-                row = await cursor.fetchone()
+            cursor = await db.execute(fetch_query, (target_id,))
+            row = await cursor.fetchone()
 
             if row:
-                # Increment usage
-                await db.execute("UPDATE quotes SET uses = uses + 1 WHERE id = ?", (row[0],))
+                # Fire and forget update (fast)
+                await db.execute("UPDATE quotes SET uses = uses + 1 WHERE id = ?", (target_id,))
                 await db.commit()
 
             return row
