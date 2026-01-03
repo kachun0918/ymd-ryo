@@ -87,6 +87,7 @@ class QuoteManager:
     async def get_random_quote(
         self, guild_id: int, user_id: Optional[int] = None
     ) -> Optional[Tuple]:
+        logger.info("🟢 [VERIFICATION] CODE_VERSION_v5_OFFSET_LOGIC")
         """
         Fetches a random quote using OFFSET method (O(N) Scan)
         """
