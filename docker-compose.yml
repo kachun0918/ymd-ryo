@@ -16,7 +16,7 @@ services:
 
   watchtower:
     image: containrrr/watchtower
-    container_name: watchtower
+    container_name: ymd_bot_watchtower
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
