@@ -27,7 +27,9 @@ class Quotes(commands.Cog):
     @not_blacklisted()
     async def save(self, ctx):
         if not ctx.message.reference:
-            return await ctx.send(embed=UI.warn(f"Reply to a message with `{ctx.prefix}save`."))
+            return await ctx.send(
+                embed=UI.warn("Error", f"Reply to a message with `{ctx.prefix}save`.")
+            )
         try:
             ref_msg = await ctx.channel.fetch_message(ctx.message.reference.message_id)
         except discord.NotFound:
@@ -115,7 +117,7 @@ class Quotes(commands.Cog):
     # 3. Update Type Hint here too
     async def list_quotes(self, ctx, member: AliasedGlobal):
         if member.bot:
-            return await ctx.send(embed=UI.warn("Bots do not have quotes."))
+            return await ctx.send(embed=UI.warn("Error", "Bots do not have quotes."))
 
         rows = await self.db.get_quotes_for_list(ctx.guild.id, member.id)
 
@@ -197,10 +199,12 @@ class Quotes(commands.Cog):
     @get_quote.error
     async def get_quote_error(self, ctx, error):
         if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(embed=UI.warn(f"Please tag a user. Usage: `{ctx.prefix}9up @User`"))
+            await ctx.send(
+                embed=UI.warn("Missing user", f"Please tag a user. Usage: `{ctx.prefix}9up @User`")
+            )
         elif isinstance(error, commands.MemberNotFound):
             # This error message now applies to both invalid User IDs AND invalid Aliases
-            await ctx.send(embed=UI.warn("User or Alias not found."))
+            await ctx.send(embed=UI.warn("Error", "User or Alias not found."))
 
 
 async def setup(bot):
