@@ -54,7 +54,8 @@ class Quotes(commands.Cog):
         else:
             await ctx.send(
                 embed=UI.warn(
-                    f"I already have that quote saved for **{ref_msg.author.display_name}**!"
+                    "Already saved",
+                    f"I already have that quote saved for **{ref_msg.author.display_name}**!",
                 )
             )
 
