@@ -35,7 +35,7 @@ class Quotes(commands.Cog):
 
         if not is_saveable(ref_msg):
             return await ctx.send(
-                embed=UI.warn("Cannot save bots, webhooks, links, or empty messages.")
+                embed=UI.warn("Error", "Cannot save bots, webhooks, links, or empty messages.")
             )
 
         success = await self.db.add_quote(
