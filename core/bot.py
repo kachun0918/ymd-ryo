@@ -22,18 +22,46 @@ def get_prefix(bot, message):
 
 # Custom Help Command
 class InformativeHelp(commands.MinimalHelpCommand):
-    @staticmethod
-    def _category_name(cog) -> str:
-        if cog is None:
-            return "General"
-
-        name = cog.qualified_name
-        if name.lower() == "dllm":
-            return "DLLM"
-        return name
-
     def _brief_for(self, command: commands.Command) -> str:
         return command.brief or command.short_doc or "No description."
+
+    def _example_for(self, command: commands.Command, prefix: str) -> str:
+        custom_examples = {
+            "help": f"{prefix}help  |  {prefix}help 9up",
+            "alias": f"{prefix}alias @user nickname",
+            "unalias": f"{prefix}unalias @user nickname",
+            "listalias": f"{prefix}listalias @user",
+            "save": f"{prefix}save   (reply to a message)",
+            "9up": f"{prefix}9up  |  {prefix}9up @user  |  {prefix}9up alias -f",
+            "9uplist": f"{prefix}9uplist @user",
+            "9uptop": f"{prefix}9uptop  |  {prefix}9uptop @user",
+            "9updel": f"{prefix}9updel @user",
+            "dllm": f"{prefix}dllm",
+        }
+        if command.name in custom_examples:
+            return custom_examples[command.name]
+
+        signature = f" {command.signature}" if command.signature else ""
+        return f"{prefix}{command.qualified_name}{signature}".strip()
+
+    @staticmethod
+    def _codeblock_chunks(lines: list[str], lang: str = "text", max_len: int = 1024) -> list[str]:
+        chunks = []
+        current = []
+        fence_overhead = len(f"```{lang}\n\n```")
+
+        for line in lines:
+            candidate = "\n".join(current + [line])
+            if len(candidate) + fence_overhead > max_len and current:
+                chunks.append(f"```{lang}\n" + "\n".join(current) + "\n```")
+                current = [line]
+            else:
+                current.append(line)
+
+        if current:
+            chunks.append(f"```{lang}\n" + "\n".join(current) + "\n```")
+
+        return chunks
 
     async def send_bot_help(self, mapping):
         prefix = self.context.clean_prefix
@@ -45,22 +73,30 @@ class InformativeHelp(commands.MinimalHelpCommand):
         all_commands.sort(key=lambda cmd: cmd.name.lower())
         embed = discord.Embed(
             title="How to use Yamada Ryo Bot",
-            description="Useful Commands",
+            description="All user commands with quick examples",
             color=discord.Color.blurple(),
         )
 
-        # Discord supports up to 25 fields per embed.
-        for command in all_commands[:25]:
+        commands_lines = []
+        for command in all_commands:
             brief = self._brief_for(command)
-            if len(brief) > 80:
-                brief = brief[:77].rstrip() + "..."
-            embed.add_field(name=f"{prefix}{command.name}", value=brief, inline=True)
+            if len(brief) > 70:
+                brief = brief[:67].rstrip() + "..."
+            commands_lines.append(f"{prefix}{command.name:<10} - {brief}")
+
+        examples_lines = [self._example_for(command, prefix) for command in all_commands]
+
+        for idx, block in enumerate(self._codeblock_chunks(commands_lines, "text"), start=1):
+            label = "Commands" if idx == 1 else f"Commands (cont. {idx})"
+            embed.add_field(name=label, value=block, inline=False)
+
+        for idx, block in enumerate(self._codeblock_chunks(examples_lines, "bash"), start=1):
+            label = "Examples" if idx == 1 else f"Examples (cont. {idx})"
+            embed.add_field(name=label, value=block, inline=False)
 
         embed.set_footer(
             text=(
-                f"Prefix: {prefix}  |  "
-                f"{prefix}help <command> for details  |  "
-                f"{prefix}help <category> by category"
+                f"Prefix: {prefix} | {prefix}help <command> for full details"
             )
         )
         await self.get_destination().send(embed=embed)
@@ -68,8 +104,9 @@ class InformativeHelp(commands.MinimalHelpCommand):
     async def send_cog_help(self, cog):
         prefix = self.context.clean_prefix
         filtered = await self.filter_commands(cog.get_commands(), sort=True)
+        category_name = cog.qualified_name if cog else "General"
         embed = discord.Embed(
-            title=f"{self._category_name(cog)} Commands",
+            title=f"{category_name} Commands",
             color=discord.Color.blurple(),
         )
 
@@ -83,10 +120,16 @@ class InformativeHelp(commands.MinimalHelpCommand):
         if not filtered:
             embed.add_field(name="Commands", value="No commands available.", inline=False)
         else:
-            value = "\n".join(
-                f"`{command.name}` - {self._brief_for(command)}" for command in filtered
-            )
-            embed.add_field(name="Commands", value=value, inline=False)
+            command_lines = [
+                f"{prefix}{command.name:<10} - {self._brief_for(command)}" for command in filtered
+            ]
+            example_lines = [self._example_for(command, prefix) for command in filtered]
+            for idx, block in enumerate(self._codeblock_chunks(command_lines, "text"), start=1):
+                label = "Commands" if idx == 1 else f"Commands (cont. {idx})"
+                embed.add_field(name=label, value=block, inline=False)
+            for idx, block in enumerate(self._codeblock_chunks(example_lines, "bash"), start=1):
+                label = "Examples" if idx == 1 else f"Examples (cont. {idx})"
+                embed.add_field(name=label, value=block, inline=False)
 
         embed.set_footer(text=f"Use {prefix}help <command> for one command detail")
         await self.get_destination().send(embed=embed)
@@ -100,6 +143,11 @@ class InformativeHelp(commands.MinimalHelpCommand):
         )
         usage = f"`{prefix}{command.qualified_name} {command.signature}`".rstrip()
         embed.add_field(name="Usage", value=usage, inline=False)
+        embed.add_field(
+            name="Example",
+            value=f"```bash\n{self._example_for(command, prefix)}\n```",
+            inline=False,
+        )
 
         if command.aliases:
             embed.add_field(
