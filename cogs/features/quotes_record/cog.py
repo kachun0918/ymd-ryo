@@ -45,7 +45,7 @@ class Quotes(commands.Cog):
     @commands.command(name="save")
     @not_blacklisted()
     async def save(self, ctx):
-        """Save the replied message as a quote entry."""
+        """Save a specific message"""
         if not ctx.message.reference:
             return await ctx.send(
                 embed=UI.warn("Error", f"Reply to a message with `{ctx.prefix}save`.")
@@ -87,13 +87,7 @@ class Quotes(commands.Cog):
     # @profile_command 
     async def get_quote(self, ctx, member: Optional[AliasedGlobal] = None, *, flags: str = ""):
         """
-        Fetch a random quote from server or a specific member/alias.
-
-        Technical:
-        - Accepts mentions, IDs, usernames, or alias strings.
-
-        Plain language:
-        - Pulls a random saved quote, optionally for one person only.
+        Fetch a random quote from server from a random member or specific member.
         """
         row = await self.db.get_random_quote(ctx.guild.id, member.id if member else None)
 
@@ -141,7 +135,7 @@ class Quotes(commands.Cog):
     @not_blacklisted()
     # 3. Update Type Hint here too
     async def list_quotes(self, ctx, member: AliasedGlobal):
-        """Show paginated quote history for a member or alias."""
+        """Show quote history from a member"""
         if member.bot:
             return await ctx.send(embed=UI.warn("Error", "Bots do not have quotes."))
 
@@ -161,7 +155,7 @@ class Quotes(commands.Cog):
     @not_blacklisted()
     # 4. Update Type Hint here too
     async def top_quotes(self, ctx, member: Optional[AliasedGlobal] = None):
-        """Display most-used quotes globally or for one member."""
+        """Display most-used quotes from a member."""
         async with ctx.typing():
             rows = await self.db.get_top_quotes(ctx.guild.id, member.id if member else None)
 
@@ -205,7 +199,7 @@ class Quotes(commands.Cog):
     @not_blacklisted()
     # 5. Update Type Hint here too
     async def delete_quote_menu(self, ctx, member: AliasedGlobal):
-        """Open interactive quote deletion menu with permission checks."""
+        """Open deletion menu"""
         rows = await self.db.get_quotes_for_deletion(ctx.guild.id, member.id)
 
         if not rows:

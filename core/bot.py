@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 
+from core.help_command import InformativeHelp
 from core.server_settings import server_settings
 
 from .logger import setup_logging
@@ -20,8 +21,7 @@ def get_prefix(bot, message):
 
     return server_settings.get_prefix(message.guild.id)
 
-
-bot = commands.Bot(command_prefix=get_prefix, intents=intents)
+bot = commands.Bot(command_prefix=get_prefix, intents=intents, help_command=InformativeHelp())
 
 
 # Define Standard Events
