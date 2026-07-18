@@ -37,28 +37,30 @@ class InformativeHelp(commands.MinimalHelpCommand):
 
     async def send_bot_help(self, mapping):
         prefix = self.context.clean_prefix
+        all_commands = []
+        for _, raw_commands in mapping.items():
+            filtered = await self.filter_commands(raw_commands, sort=True)
+            all_commands.extend(filtered)
+
+        all_commands.sort(key=lambda cmd: cmd.name.lower())
         embed = discord.Embed(
             title="How to use Yamada Ryo Bot",
-            description=f"Prefix: `{prefix}`",
+            description="Useful Commands",
             color=discord.Color.blurple(),
         )
 
-        for cog, raw_commands in sorted(
-            mapping.items(), key=lambda item: self._category_name(item[0]).lower()
-        ):
-            filtered = await self.filter_commands(raw_commands, sort=True)
-            if not filtered:
-                continue
-
-            value = "\n".join(
-                f"`{command.name}` - {self._brief_for(command)}" for command in filtered
-            )
-            embed.add_field(name=self._category_name(cog), value=value, inline=False)
+        # Discord supports up to 25 fields per embed.
+        for command in all_commands[:25]:
+            brief = self._brief_for(command)
+            if len(brief) > 80:
+                brief = brief[:77].rstrip() + "..."
+            embed.add_field(name=f"{prefix}{command.name}", value=brief, inline=True)
 
         embed.set_footer(
             text=(
-                f"Try {prefix}help <command> for details | "
-                f"{prefix}help <category> for one category"
+                f"Prefix: {prefix}  |  "
+                f"{prefix}help <command> for details  |  "
+                f"{prefix}help <category> by category"
             )
         )
         await self.get_destination().send(embed=embed)
