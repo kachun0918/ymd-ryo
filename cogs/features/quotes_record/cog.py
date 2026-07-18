@@ -83,8 +83,8 @@ class Quotes(commands.Cog):
 
     # --- COMMAND: !9up or !9up @user/alias ---
     @commands.command(name="9up")
-    @profile_command
     @not_blacklisted()
+    # @profile_command 
     async def get_quote(self, ctx, member: Optional[AliasedGlobal] = None, *, flags: str = ""):
         """
         Fetch a random quote from server or a specific member/alias.
