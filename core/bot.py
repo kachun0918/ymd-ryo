@@ -22,8 +22,6 @@ def get_prefix(bot, message):
 
 # Custom Help Command
 class InformativeHelp(commands.MinimalHelpCommand):
-    """Custom help command with clearer summaries and usage."""
-
     @staticmethod
     def _category_name(cog) -> str:
         if cog is None:
