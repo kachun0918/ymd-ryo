@@ -1,3 +1,15 @@
+"""
+Admin health-check cog.
+
+Technical:
+- Collects runtime process/system metrics and sends them as an embed.
+- Restricted to owner to prevent noisy diagnostic usage.
+
+Plain language:
+- Quick status page for your bot server health.
+- Shows ping, uptime, CPU, RAM, and disk usage.
+"""
+
 import os
 import platform
 import time
@@ -11,11 +23,19 @@ from core.iam import is_owner
 
 
 class Health(commands.Cog):
+    """
+    Owner-only system diagnostics.
+
+    Plain language:
+    - This command helps you see if the bot host is healthy.
+    """
+
     def __init__(self, bot):
         self.bot = bot
         self.start_time = time.time()
 
     def _get_uptime(self):
+        """Return process uptime as a human-readable duration string."""
         current_time = time.time()
         uptime_seconds = int(current_time - self.start_time)
         return str(timedelta(seconds=uptime_seconds))
@@ -24,7 +44,12 @@ class Health(commands.Cog):
     @commands.command(hidden=True)
     @is_owner()
     async def health(self, ctx):
-        """Displays system status."""
+        """
+        Display live runtime and host statistics.
+
+        Plain language:
+        - One command to check if things look normal.
+        """
         async with ctx.typing():
             process = psutil.Process(os.getpid())
             ram_usage = process.memory_info().rss / 1024 / 1024

@@ -1,3 +1,15 @@
+"""
+Quotes feature cog.
+
+Technical:
+- Implements quote save/retrieve/list/top/delete commands backed by SQLite.
+- Supports alias-based user targeting and webhook-based mimic output.
+
+Plain language:
+- This is the memory book of your server's funny/important messages.
+- Users can save quotes and replay them later with rich context.
+"""
+
 from typing import Optional
 
 import discord
@@ -7,25 +19,33 @@ from core.alias import AliasedGlobal
 from core.iam import not_blacklisted
 from core.profiler import profile_command
 from core.ui import UI
-from core.views import PaginationView
 
 from .db import QuoteManager
 from .helpers import is_saveable, send_mimic_message
-from .views import DeleteQuoteView
+from .views import DeleteQuoteView, PaginationView
 
 
 class Quotes(commands.Cog):
+    """
+    User-facing quote commands for a guild.
+
+    Plain language:
+    - Save and recall memorable messages from people in the server.
+    """
+
     def __init__(self, bot):
         self.bot = bot
         self.db = QuoteManager("db/quotes.db")
 
     async def cog_load(self):
+        """Initialize quote database when cog starts."""
         await self.db.initialize()
 
     # --- COMMAND: !save ---
     @commands.command(name="save")
     @not_blacklisted()
     async def save(self, ctx):
+        """Save the replied message as a quote entry."""
         if not ctx.message.reference:
             return await ctx.send(
                 embed=UI.warn("Error", f"Reply to a message with `{ctx.prefix}save`.")
@@ -67,8 +87,13 @@ class Quotes(commands.Cog):
     @not_blacklisted()
     async def get_quote(self, ctx, member: Optional[AliasedGlobal] = None, *, flags: str = ""):
         """
-        Fetches a random quote.
-        Accepts: @User, UserID, Username, or Alias.
+        Fetch a random quote from server or a specific member/alias.
+
+        Technical:
+        - Accepts mentions, IDs, usernames, or alias strings.
+
+        Plain language:
+        - Pulls a random saved quote, optionally for one person only.
         """
         row = await self.db.get_random_quote(ctx.guild.id, member.id if member else None)
 
@@ -88,7 +113,7 @@ class Quotes(commands.Cog):
 
                 class DummyMember:
                     display_name = "Unknown User"
-                    display_avatar = ctx.guild.icon or discord.Embed.Empty
+                    display_avatar = ctx.guild.icon
                     color = discord.Color.default()
 
                 target_member = DummyMember()
@@ -116,6 +141,7 @@ class Quotes(commands.Cog):
     @not_blacklisted()
     # 3. Update Type Hint here too
     async def list_quotes(self, ctx, member: AliasedGlobal):
+        """Show paginated quote history for a member or alias."""
         if member.bot:
             return await ctx.send(embed=UI.warn("Error", "Bots do not have quotes."))
 
@@ -135,6 +161,7 @@ class Quotes(commands.Cog):
     @not_blacklisted()
     # 4. Update Type Hint here too
     async def top_quotes(self, ctx, member: Optional[AliasedGlobal] = None):
+        """Display most-used quotes globally or for one member."""
         async with ctx.typing():
             rows = await self.db.get_top_quotes(ctx.guild.id, member.id if member else None)
 
@@ -178,6 +205,7 @@ class Quotes(commands.Cog):
     @not_blacklisted()
     # 5. Update Type Hint here too
     async def delete_quote_menu(self, ctx, member: AliasedGlobal):
+        """Open interactive quote deletion menu with permission checks."""
         rows = await self.db.get_quotes_for_deletion(ctx.guild.id, member.id)
 
         if not rows:
@@ -198,6 +226,7 @@ class Quotes(commands.Cog):
     # ==========================================================================
     @get_quote.error
     async def get_quote_error(self, ctx, error):
+        """Handle user-input errors for quote retrieval command."""
         if isinstance(error, commands.MissingRequiredArgument):
             await ctx.send(
                 embed=UI.warn("Missing user", f"Please tag a user. Usage: `{ctx.prefix}9up @User`")

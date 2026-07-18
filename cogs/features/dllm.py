@@ -1,3 +1,15 @@
+"""
+DLLM sticker/gif feature cog.
+
+Technical:
+- Loads a JSON list of media links and sends one random link per command call.
+- Uses webhooks when available to mimic requester identity; falls back to normal bot message.
+
+Plain language:
+- Fun command that posts random stickers/gifs from your curated list.
+- Tries to look like the requesting user if permissions allow.
+"""
+
 import json
 import logging
 import os
@@ -6,10 +18,19 @@ import random
 import discord
 from discord.ext import commands
 
+from core.iam import is_owner, not_blacklisted
+
 logger = logging.getLogger("bot.dllm")
 
 
 class dllm(commands.Cog):
+    """
+    Random media delivery feature.
+
+    Plain language:
+    - Think of this as your random sticker/gif button.
+    """
+
     def __init__(self, bot):
         self.bot = bot
         self.links_file = "data/dllm_links.json"
@@ -17,6 +38,7 @@ class dllm(commands.Cog):
         self._load_links()
 
     def _load_links(self):
+        """Load media URL list from disk into memory."""
         if os.path.exists(self.links_file):
             try:
                 with open(self.links_file, "r") as f:
@@ -30,6 +52,7 @@ class dllm(commands.Cog):
             self.links = []
 
     async def _get_webhook(self, ctx):
+        """Get or create the feature webhook for the current channel/thread."""
         is_thread = isinstance(ctx.channel, discord.Thread)
         channel = ctx.channel.parent if is_thread else ctx.channel
 
@@ -42,7 +65,14 @@ class dllm(commands.Cog):
         return webhook, is_thread
 
     @commands.command(aliases=["sticker", "gif"])
+    @not_blacklisted()
     async def dllm(self, ctx):
+        """
+        Send one random media link from the DLLM dataset.
+
+        Plain language:
+        - Posts a random sticker/gif entry when users call the command.
+        """
         if not self.links:
             return await ctx.send("❌ No assets loaded!")
 
@@ -70,8 +100,9 @@ class dllm(commands.Cog):
         await ctx.send(sticker_url)
 
     @commands.command(hidden=True)
-    @commands.is_owner()
+    @is_owner()
     async def reload_dllm(self, ctx):
+        """Reload DLLM links from disk without restarting bot."""
         self._load_links()
         await ctx.send(f"🔄 Reloaded! Total assets: **{len(self.links)}**")
 

@@ -1,3 +1,14 @@
+"""
+Quotes helper utilities.
+
+Technical:
+- Contains reusable validation and webhook-send helpers for quotes workflow.
+
+Plain language:
+- Small support functions used by the quotes feature.
+- Keeps main command file cleaner and easier to read.
+"""
+
 import logging
 
 import discord
@@ -7,7 +18,10 @@ logger = logging.getLogger("discord.quotes.helpers")
 
 def is_saveable(msg: discord.Message) -> bool:
     """
-    Validates if a message is eligible to be saved as a quote.
+    Validate whether a message can be saved as a quote.
+
+    Plain language:
+    - Blocks bots/webhooks/links/empty text to keep quote quality clean.
     """
     if msg.author.bot:
         return False
@@ -25,9 +39,15 @@ async def send_mimic_message(
     ctx, member: discord.Member, content: str, footer_embed: discord.Embed = None
 ):
     """
-    Attempts to send a message via Webhook to mimic the user.
-    Falls back to a standard Embed if permissions are missing or webhook fails.
-    Supports Threads automatically.
+    Send quote output through webhook mimic when possible.
+
+    Technical:
+    - Uses per-channel webhook and thread-aware routing.
+    - Falls back to embed when webhook permission or send fails.
+
+    Plain language:
+    - Tries to make the quote look like the original speaker.
+    - If that is not possible, it still sends a readable embed.
     """
 
     perms = ctx.channel.permissions_for(ctx.guild.me)
@@ -70,7 +90,7 @@ async def _send_fallback_embed(
     ctx, member: discord.Member, content: str, footer_embed: discord.Embed = None
 ):
     """
-    Sends a standard Embed when Webhooks don't work.
+    Send standard embed when webhook mimic path is unavailable.
     """
     mimic_name = f"🗣️ {member.display_name}"
 

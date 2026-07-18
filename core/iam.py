@@ -21,7 +21,7 @@ def is_admin():
 
         role = discord.utils.get(ctx.author.roles, name=settings.ADMIN_ROLE_NAME)
         if role is None:
-            raise commands.MissingRole(settings.admin_role_name)
+            raise commands.MissingRole(settings.ADMIN_ROLE_NAME)
 
         return True
 

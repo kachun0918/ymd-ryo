@@ -3,13 +3,8 @@ FROM python:3.11-slim
 # Prevent Python from buffering stdout/stderr
 ENV PYTHONUNBUFFERED=1
 
-# Install System Dependencies
-# ffmpeg: video capture
-# nodejs: Required by yt-dlp to decrypt YouTube signatures
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg nodejs && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# CCTV feature is parked under `unused functions/cctv`.
+# Re-add `ffmpeg` and `nodejs` install before restoring CCTV.
 
 WORKDIR /app
 

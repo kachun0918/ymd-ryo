@@ -1,3 +1,15 @@
+"""
+Quotes persistence layer.
+
+Technical:
+- Owns SQLite schema creation and query methods for quote operations.
+- Keeps a persistent async DB connection with practical SQLite PRAGMAs.
+
+Plain language:
+- This file is the quote database engine.
+- It saves quotes, picks random ones, and tracks usage stats.
+"""
+
 import logging
 import os
 import random
@@ -10,17 +22,26 @@ logger = logging.getLogger("discord.quotes.db")
 
 
 class QuoteManager:
+    """
+    Database service for quote records.
+
+    Plain language:
+    - A helper object that handles all quote read/write operations.
+    """
+
     def __init__(self, db_path: str = "db/quotes.db"):
         self.db_path = db_path
         self._ensure_db_dir()
         self.db_connection = None
 
     def _ensure_db_dir(self):
+        """Create DB directory if missing."""
         dirname = os.path.dirname(self.db_path)
         if dirname and not os.path.exists(dirname):
             os.makedirs(dirname)
 
     async def get_db(self):
+        """Return lazy-initialized shared SQLite connection."""
         if self.db_connection is None:
             self.db_connection = await aiosqlite.connect(self.db_path)
             await self.db_connection.execute("PRAGMA journal_mode=WAL")
@@ -29,6 +50,7 @@ class QuoteManager:
         return self.db_connection
 
     async def initialize(self):
+        """Create quotes table and indexes if they do not exist."""
         db = await self.get_db()
         await db.execute("""
             CREATE TABLE IF NOT EXISTS quotes (
@@ -53,6 +75,7 @@ class QuoteManager:
     async def get_random_quote(
         self, guild_id: int, user_id: Optional[int] = None
     ) -> Optional[Tuple]:
+        """Return one random quote and increment its use counter."""
         db = await self.get_db()
 
         where_clauses = ["guild_id = ?"]
@@ -101,6 +124,7 @@ class QuoteManager:
         channel_id: int,
         timestamp: int,
     ) -> bool:
+        """Insert a new quote if no duplicate (guild, user, content) exists."""
         current_time = int(time.time())
         db = await self.get_db()
 
@@ -123,12 +147,14 @@ class QuoteManager:
     # 📜 Standard Getters (Updated to use self.get_db())
     # ==========================================================================
     async def get_quotes_for_list(self, guild_id: int, user_id: int) -> List[Tuple]:
+        """Fetch quote rows for paginated list UI."""
         db = await self.get_db()
         query = "SELECT content, added_timestamp, adder_user_id, uses FROM quotes WHERE guild_id = ? AND user_id = ? ORDER BY added_timestamp DESC"
         async with db.execute(query, (guild_id, user_id)) as cursor:
             return await cursor.fetchall()
 
     async def get_quotes_for_deletion(self, guild_id: int, user_id: int) -> List[Tuple]:
+        """Fetch quote rows including quote IDs for deletion UI."""
         db = await self.get_db()
         query = "SELECT content, added_timestamp, adder_user_id, uses, id FROM quotes WHERE guild_id = ? AND user_id = ? ORDER BY added_timestamp DESC"
         async with db.execute(query, (guild_id, user_id)) as cursor:
@@ -137,6 +163,7 @@ class QuoteManager:
     async def get_top_quotes(
         self, guild_id: int, user_id: Optional[int] = None, limit: int = 10
     ) -> List[Tuple]:
+        """Return most-used quote rows ordered by usage count."""
         db = await self.get_db()
         query = "SELECT content, user_id, uses FROM quotes WHERE guild_id = ? AND uses > 0"
         params = [guild_id]
@@ -149,6 +176,7 @@ class QuoteManager:
             return await cursor.fetchall()
 
     async def delete_quote(self, quote_id: int) -> bool:
+        """Delete one quote by primary key."""
         db = await self.get_db()
         cursor = await db.execute("DELETE FROM quotes WHERE id = ?", (quote_id,))
         await db.commit()

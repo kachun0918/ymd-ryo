@@ -17,25 +17,44 @@ IGNORE_FILES = {
 }
 
 
+def _is_private_path(path: str) -> bool:
+    return any(part.startswith("_") for part in path.split(os.sep))
+
+
+async def _load_extension_safe(bot, extension_name: str, is_package: bool = False):
+    try:
+        await bot.load_extension(extension_name)
+        if is_package:
+            logger.info(f"📦 Loaded extension package: {extension_name}")
+        else:
+            logger.info(f"📦 Loaded extension: {extension_name}")
+    except commands.NoEntryPointError:
+        pass
+    except commands.ExtensionAlreadyLoaded:
+        logger.warning(f"⚠️ {extension_name} is already loaded.")
+    except Exception as e:
+        kind = "package" if is_package else "extension"
+        logger.error(f"❌ Failed to load {kind} {extension_name}: {e}", exc_info=True)
+
+
 async def load_cogs(bot):
     if not os.path.exists("cogs"):
         logger.warning("No 'cogs' directory found.")
         return
 
     for root, dirs, files in os.walk("./cogs"):
-        # Skip private folders (e.g. __pycache__)
-        if any(part.startswith("_") for part in root.split(os.sep)):
+        # Deterministic load order for stable startup behavior.
+        dirs.sort()
+        files.sort()
+
+        # Skip private folders (e.g. __pycache__).
+        if _is_private_path(root):
             continue
 
         if "__init__.py" in files and "cog.py" in files:
             relative_path = os.path.relpath(root, ".")
             module_path = relative_path.replace(os.path.sep, ".")
-
-            try:
-                await bot.load_extension(module_path)
-                logger.info(f"📦 Loaded extension package: {module_path}")
-            except Exception as e:
-                logger.error(f"❌ Failed to load package {module_path}: {e}", exc_info=True)
+            await _load_extension_safe(bot, module_path, is_package=True)
 
             # 🛑 STOP here for this folder.
             # We already loaded the package, so don't try to load 'cog.py' or 'capture.py' individually.
@@ -55,12 +74,4 @@ async def load_cogs(bot):
             module_path = relative_path.replace(os.path.sep, ".")
             extension_name = f"{module_path}.{filename[:-3]}"
 
-            try:
-                await bot.load_extension(extension_name)
-                logger.info(f"📦 Loaded extension: {extension_name}")
-            except commands.NoEntryPointError:
-                pass
-            except commands.ExtensionAlreadyLoaded:
-                logger.warning(f"⚠️ {extension_name} is already loaded.")
-            except Exception as e:
-                logger.error(f"❌ Failed to load {extension_name}: {e}", exc_info=True)
+            await _load_extension_safe(bot, extension_name)

@@ -1,3 +1,15 @@
+"""
+Admin management cog.
+
+Technical:
+- Provides owner-only runtime controls for extension loading, prefix changes, and log viewing.
+- Contains helper logic to resolve shorthand extension names into full dotted paths.
+
+Plain language:
+- This is your bot control panel.
+- Use it to load/reload modules, change prefix, and quickly check logs.
+"""
+
 import asyncio
 import logging
 import os
@@ -12,10 +24,23 @@ logger = logging.getLogger("discord.management")
 
 
 class Management(commands.Cog):
+    """
+    Runtime administration commands for bot owner.
+
+    Technical:
+    - Wraps discord.py extension lifecycle operations.
+    - Exposes hidden owner-only commands to avoid accidental public usage.
+
+    Plain language:
+    - Lets you control the bot while it is running.
+    - Useful when you want quick fixes without restarting the whole bot.
+    """
+
     def __init__(self, bot):
         self.bot = bot
 
     def _resolve_cog_path(self, partial_name: str) -> str:
+        """Resolve shorthand module names into fully-qualified extension paths."""
         if partial_name.startswith("cogs."):
             return partial_name
 
@@ -34,6 +59,7 @@ class Management(commands.Cog):
 
     @commands.Cog.listener()
     async def on_command(self, ctx):
+        """Log command usage for operator visibility."""
         cog_name = ctx.cog.__class__.__name__ if ctx.cog else "Unknown"
         logger.info(
             f"[{cog_name}] {ctx.author.display_name} triggered {ctx.command.name} in {ctx.channel.name}"
@@ -43,6 +69,12 @@ class Management(commands.Cog):
     @commands.command(hidden=True)
     @is_owner()
     async def reload(self, ctx, extension: str):
+        """
+        Reload an already-loaded extension.
+
+        Plain language:
+        - Refreshes one module without restarting the whole bot.
+        """
         full_path = self._resolve_cog_path(extension)
         try:
             await self.bot.reload_extension(full_path)
@@ -56,6 +88,12 @@ class Management(commands.Cog):
     @commands.command(hidden=True)
     @is_owner()
     async def load(self, ctx, extension: str):
+        """
+        Load an extension that is not currently active.
+
+        Plain language:
+        - Turns on a module while the bot is running.
+        """
         full_path = self._resolve_cog_path(extension)
         try:
             await self.bot.load_extension(full_path)
@@ -71,6 +109,12 @@ class Management(commands.Cog):
     @commands.command(hidden=True)
     @is_owner()
     async def unload(self, ctx, extension: str):
+        """
+        Unload an active extension.
+
+        Plain language:
+        - Turns off one module while keeping the bot online.
+        """
         full_path = self._resolve_cog_path(extension)
 
         # Safety check
@@ -90,6 +134,7 @@ class Management(commands.Cog):
     @commands.command(name="listcogs", hidden=True)
     @is_owner()
     async def list_cogs(self, ctx):
+        """Show all currently loaded extension modules."""
         loaded_extensions = list(self.bot.extensions.keys())
         clean_list = []
         for ext in loaded_extensions:
@@ -103,6 +148,7 @@ class Management(commands.Cog):
     @commands.command(hidden=True)
     @is_owner()
     async def setprefix(self, ctx, new_prefix: str):
+        """Set this server's command prefix."""
         if len(new_prefix) > 5:
             await ctx.send(embed=UI.warn("Prefix is too long."))
             return
@@ -114,6 +160,7 @@ class Management(commands.Cog):
     @commands.command(name="logs", hidden=True)
     @is_owner()
     async def view_logs(self, ctx, lines: int = 15):
+        """Show the most recent lines from the bot log file."""
         log_file_path = "logs/discord.log"
         if not os.path.exists(log_file_path):
             await ctx.send(embed=UI.error("File Error", "Log file not found."))
