@@ -95,7 +95,12 @@ class HKO(commands.Cog):
     """
     @staticmethod
     def _extract_temperature(payload: dict) -> float | None:
-        temp_data = payload.get("temperature", {}).get("data", [])
+        temp_block = payload.get("temperature", {})
+        if not isinstance(temp_block, dict):
+            return None
+        temp_data = temp_block.get("data", [])
+        if not isinstance(temp_data, list):
+            return None
         if not temp_data:
             return None
 
@@ -115,7 +120,9 @@ class HKO(commands.Cog):
     @staticmethod
     def _extract_warning_text(payload: dict) -> str:
         messages = payload.get("warningMessage", [])
-        if not messages:
+        if isinstance(messages, str):
+            return messages.strip()
+        if not isinstance(messages, list) or not messages:
             return ""
         return " | ".join(str(item).strip() for item in messages if str(item).strip())
 
@@ -124,7 +131,12 @@ class HKO(commands.Cog):
     """
     @staticmethod
     def _extract_rainfall_summary(payload: dict) -> str | None:
-        rainfall_data = payload.get("rainfall", {}).get("data", [])
+        rainfall_block = payload.get("rainfall", {})
+        if not isinstance(rainfall_block, dict):
+            return None
+        rainfall_data = rainfall_block.get("data", [])
+        if not isinstance(rainfall_data, list):
+            return None
         if not rainfall_data:
             return None
 
@@ -146,6 +158,8 @@ class HKO(commands.Cog):
     @staticmethod
     def _extract_psr_from_forecast(payload: dict) -> str | None:
         forecast_rows = payload.get("weatherForecast", [])
+        if not isinstance(forecast_rows, list):
+            return None
         if not forecast_rows:
             return None
 
@@ -227,9 +241,19 @@ class HKO(commands.Cog):
         local_forecast: tuple[str, str] | None = None,
     ) -> discord.Embed:
         temp = self._extract_temperature(payload)
-        humidity = payload.get("humidity", {}).get("data", [])
-        uv_data = payload.get("uvindex", {}).get("data", [])
+        humidity_block = payload.get("humidity", {})
+        humidity = humidity_block.get("data", []) if isinstance(humidity_block, dict) else []
+        if not isinstance(humidity, list):
+            humidity = []
+
+        uv_block = payload.get("uvindex", {})
+        uv_data = uv_block.get("data", []) if isinstance(uv_block, dict) else []
+        if not isinstance(uv_data, list):
+            uv_data = []
+
         icon = payload.get("icon", [])
+        if not isinstance(icon, list):
+            icon = []
         update_time = payload.get("updateTime", "Unknown")
         warning_text = self._extract_warning_text(payload)
 
